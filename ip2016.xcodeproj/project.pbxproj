@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0226A1AF1CC1A35800EA6333 /* TAM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0226A1AD1CC1A35800EA6333 /* TAM.cpp */; };
 		1161FECD1C4EA64A00BF0219 /* control.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1161FEC51C4EA64A00BF0219 /* control.cpp */; };
 		1161FECE1C4EA64A00BF0219 /* image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1161FEC71C4EA64A00BF0219 /* image.cpp */; };
 		1161FECF1C4EA64A00BF0219 /* ip.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1161FEC91C4EA64A00BF0219 /* ip.cpp */; };
@@ -46,6 +47,8 @@
 
 /* Begin PBXFileReference section */
 		0226A1AC1CC1A24700EA6333 /* SampleStrokeBMP.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = SampleStrokeBMP.bmp; sourceTree = SOURCE_ROOT; };
+		0226A1AD1CC1A35800EA6333 /* TAM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TAM.cpp; path = ip2016/TAM.cpp; sourceTree = SOURCE_ROOT; };
+		0226A1AE1CC1A35800EA6333 /* TAM.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = TAM.hpp; path = ip2016/TAM.hpp; sourceTree = SOURCE_ROOT; };
 		1161FEC41C4EA64A00BF0219 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = ip2016/common.h; sourceTree = SOURCE_ROOT; };
 		1161FEC51C4EA64A00BF0219 /* control.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = control.cpp; path = ip2016/control.cpp; sourceTree = SOURCE_ROOT; };
 		1161FEC61C4EA64A00BF0219 /* control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = control.h; path = ip2016/control.h; sourceTree = SOURCE_ROOT; };
@@ -147,6 +150,8 @@
 				1161FEC61C4EA64A00BF0219 /* control.h */,
 				1161FEC71C4EA64A00BF0219 /* image.cpp */,
 				1161FEC81C4EA64A00BF0219 /* image.h */,
+				0226A1AD1CC1A35800EA6333 /* TAM.cpp */,
+				0226A1AE1CC1A35800EA6333 /* TAM.hpp */,
 				1161FEC91C4EA64A00BF0219 /* ip.cpp */,
 				0226A1AC1CC1A24700EA6333 /* SampleStrokeBMP.bmp */,
 				1161FECA1C4EA64A00BF0219 /* ip.h */,
@@ -219,6 +224,7 @@
 				1161FEDC1C4EA65E00BF0219 /* image_helper.c in Sources */,
 				1161FEDD1C4EA65E00BF0219 /* SOIL.c in Sources */,
 				1161FECE1C4EA64A00BF0219 /* image.cpp in Sources */,
+				0226A1AF1CC1A35800EA6333 /* TAM.cpp in Sources */,
 				1161FEDB1C4EA65E00BF0219 /* image_DXT.c in Sources */,
 				1161FEDE1C4EA65E00BF0219 /* stb_image_aug.c in Sources */,
 			);
