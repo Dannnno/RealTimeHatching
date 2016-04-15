@@ -718,11 +718,11 @@ Pixel ip_resample_gaussian(Image* src, double x, double y, int size, double sigm
 /*
  * rotate image using one of three sampling techniques
  */
-Image* ip_rotate (Image* src, double theta, int x, int y, int mode, 
-                  int size, double sigma)
+Image* ip_rotate (Image* src, double theta)
 {
     Image* dest = new Image(src->getWidth(), src->getHeight());
-    
+    double x = src->getWidth()/2;
+    double y = src->getHeight()/2;
     double ctheta = cos(-theta*M_PI/180.);
     double stheta = sin(-theta*M_PI/180.);
     
@@ -742,20 +742,7 @@ Image* ip_rotate (Image* src, double theta, int x, int y, int mode,
                 continue;
             }
             
-            Pixel p;
-            switch (mode) {
-                case I_NEAREST:
-                    p = ip_resample_nearest(src, xp, yp);
-                    break;
-                case I_BILINEAR:
-                    p = ip_resample_bilinear(src, xp, yp);
-                    break;
-                case I_GAUSSIAN:
-                    p = ip_resample_gaussian(src, xp, yp, size, sigma);
-                    break;
-                default:
-                    throw std::logic_error("This shouldn't happen");
-            }
+            Pixel p = ip_resample_bilinear(src, xp, yp);
             
             dest->setPixel(i, j, p);
         }
@@ -779,8 +766,7 @@ Image* ip_saturate (Image* src, double alpha)
 /*
  * scale image using one of three sampling techniques
  */
-Image* ip_scale (Image* src, double xFac, double yFac, int mode, 
-                 int size, double sigma)
+Image* ip_scale (Image* src, double xFac, double yFac)
 {
     Image* dest = new Image(src->getWidth()*xFac, src->getHeight()*yFac);
     
@@ -793,21 +779,8 @@ Image* ip_scale (Image* src, double xFac, double yFac, int mode,
                 continue;
             }
             
-            Pixel p;
-            switch (mode) {
-                case I_NEAREST:
-                    p = ip_resample_nearest(src, xp, yp);
-                    break;
-                case I_BILINEAR:
-                    p = ip_resample_bilinear(src, xp, yp);
-                    break;
-                case I_GAUSSIAN:
-                    p = ip_resample_gaussian(src, xp, yp, size, sigma);
-                    break;
-                default:
-                    throw std::logic_error("This shouldn't happen");
-            }
-            
+            Pixel p = ip_resample_bilinear(src, xp, yp);
+    
             dest->setPixel(i, j, p);
         }
     }

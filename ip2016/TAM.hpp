@@ -17,32 +17,23 @@
 std::mt19937 rng;
 
 class TAM{
+struct RandomStroke;
 public:
     TAM (int numTones, int numRES, Image* stroke);
+    void drawStroke(Image* strokeImage, RandomStroke strokeModifiers, Image* dest);
+
     
+    std::vector<std::vector<Image*>> images;
 private:
     struct RandomStroke {
         double length;
         double x, y;
-        int rot;
+        double rot;
     };
     
-    RandomStroke getRandomStroke() {
-        static std::uniform_real_distribution<double> pos_dist(0, 1);
-        static std::uniform_real_distribution<double> length_dist(.3, 1);
-        static std::uniform_int_distribution<int> rot_dist(-2, 2);
-        
-        RandomStroke stroke;
-        
-        stroke.length = length_dist(rng);
-        stroke.x = pos_dist(rng);
-        stroke.y = pos_dist(rng);
-        stroke.rot = rot_dist(rng);
-        
-        return stroke;
-    }
+    RandomStroke getRandomStroke() const;
     
-    std::vector<std::vector<Image*>> images;
+    
 
 };
 
