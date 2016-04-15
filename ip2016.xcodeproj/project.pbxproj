@@ -45,6 +45,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0226A1AC1CC1A24700EA6333 /* SampleStrokeBMP.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = SampleStrokeBMP.bmp; sourceTree = SOURCE_ROOT; };
 		1161FEC41C4EA64A00BF0219 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = ip2016/common.h; sourceTree = SOURCE_ROOT; };
 		1161FEC51C4EA64A00BF0219 /* control.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = control.cpp; path = ip2016/control.cpp; sourceTree = SOURCE_ROOT; };
 		1161FEC61C4EA64A00BF0219 /* control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = control.h; path = ip2016/control.h; sourceTree = SOURCE_ROOT; };
@@ -147,6 +148,7 @@
 				1161FEC71C4EA64A00BF0219 /* image.cpp */,
 				1161FEC81C4EA64A00BF0219 /* image.h */,
 				1161FEC91C4EA64A00BF0219 /* ip.cpp */,
+				0226A1AC1CC1A24700EA6333 /* SampleStrokeBMP.bmp */,
 				1161FECA1C4EA64A00BF0219 /* ip.h */,
 				1161FECB1C4EA64A00BF0219 /* main.cpp */,
 				1161FECC1C4EA64A00BF0219 /* main.h */,
