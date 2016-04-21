@@ -9,7 +9,7 @@
 
 
 
-Image* ip_generate_TAM (Image* src);
+Image* ip_generate_TAM ();
 
 
 

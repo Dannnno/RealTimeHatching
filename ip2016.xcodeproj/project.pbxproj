@@ -313,7 +313,7 @@
 			buildSettings = {
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/ip2015",
+					"$(PROJECT_DIR)/ip2016",
 				);
 				PRODUCT_NAME = ip2016;
 			};
@@ -324,7 +324,7 @@
 			buildSettings = {
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/ip2015",
+					"$(PROJECT_DIR)/ip2016",
 				);
 				PRODUCT_NAME = ip2016;
 			};

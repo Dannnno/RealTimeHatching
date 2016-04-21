@@ -206,6 +206,17 @@ int Image::index (int x, int y, int c)
 	return (((height - y - 1) * width + x) * 3 + c);
 }
 
+double Image::getTone() {
+    double tone = 0;
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            tone += pixels[index(x, y, RED)] / 255.;
+        }
+    }
+    
+    return 1. - (tone / (static_cast<double>(width * height)));
+}
+
 
 double Image::getPixel (int x, int y, int channel)
 {

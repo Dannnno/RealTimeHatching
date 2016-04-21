@@ -14,8 +14,8 @@
 #include <vector>
 #include "image.h"
 
-std::mt19937 rng;
-
+void ip_composite(Image* dest, Image* strokeImage, double x, double y);
+Image* ip_scale (Image* src, double xFac, double yFac);
 class TAM{
 struct RandomStroke;
 public:

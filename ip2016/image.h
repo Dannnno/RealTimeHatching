@@ -105,7 +105,9 @@ public:
 	void		setPixel_ (int x, int y, int channel, double value);
 	void		setPixel  (int x, int y, Pixel& pixel);
 	void		setPixel_ (int x, int y, Pixel& pixel);
-
+    
+    double getTone();
+    
 	// OpenGL call wrappers
 	void		glDrawPixelsWrapper ();
 	void		glTexImage2DWrapper ();
