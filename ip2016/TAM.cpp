@@ -30,45 +30,52 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
             imageSize *= 2;
         }
     }
-    
-    
-    double maxTone = .05;
-    while (fabs(maxTone - images[0][numRes-1]->getTone()) > 0.01) {
-        RandomStroke bestStroke;
-        double bestTone = -10000;
-        for (int i = 0; i < 1000; ++i) {
-            double toneSum = 0;
-            RandomStroke currentStroke = getRandomStroke();
-            for (int resolution = 0; resolution < numRes; ++resolution) {
-                if (fabs(maxTone - images[0][resolution]->getTone()) > 0.01) {
-                    drawStroke(stroke, currentStroke, &candidates[resolution]);
-                    // Get the effective length of the stroke, given that it might "run off" the edge
-                    double toneContribution = candidates[resolution].getTone() - images[0][resolution]->getTone();
-                    const double width = images[0][resolution]->getWidth();
-                    toneContribution /=
-                        min((width - currentStroke.x*width),
-                            currentStroke.length * stroke->getWidth()) / width;
-                    toneSum += toneContribution;
-                    candidates[resolution] = *images[0][resolution];
+    double darkestTone =.2;
+    for (int toneLevel = 0; toneLevel < numTones; ++toneLevel) {
+        double maxTone = (darkestTone / numTones)* (toneLevel + 1);
+        while (fabs(maxTone - images[toneLevel][numRes-1]->getTone()) > 0.01) {
+            RandomStroke bestStroke;
+            double bestTone = -10000;
+            for (int i = 0; i < 10; ++i) {
+                double toneSum = 0;
+                RandomStroke currentStroke = getRandomStroke();
+                for (int resolution = 0; resolution < numRes; ++resolution) {
+                    if (fabs(maxTone - images[toneLevel][resolution]->getTone()) > 0.01) {
+                        drawStroke(stroke, currentStroke, &candidates[resolution]);
+                        // Get the effective length of the stroke, given that it might "run off" the edge
+                        double toneContribution = candidates[resolution].getTone() - images[toneLevel][resolution]->getTone();
+                        const double width = images[toneLevel][resolution]->getWidth();
+                        toneContribution /=
+                            min((width - currentStroke.x*width),
+                                currentStroke.length * stroke->getWidth()) / width;
+                        toneSum += toneContribution;
+                        candidates[resolution] = *images[toneLevel][resolution];
+                    }
+                }
+                
+                if (toneSum > bestTone) {
+                    bestTone = toneSum;
+                    bestStroke = currentStroke;
                 }
             }
             
-            if (fabs(maxTone - toneSum) < fabs(maxTone - bestTone)) {
-                bestTone = toneSum;
-                bestStroke = currentStroke;
+            for (int candidate = 0; candidate < numRes; ++candidate) {
+                if (fabs(maxTone - images[toneLevel][candidate]->getTone()) > 0.01) {
+                    drawStroke(stroke, bestStroke, images[toneLevel][candidate]);
+                    candidates[candidate] = *images[toneLevel][candidate];
+                }
             }
+    //        currentImage = images[0][0];
+    //        glutPostRedisplay();
         }
         
-        for (int candidate = 0; candidate < numRes; ++candidate) {
-            if (fabs(maxTone - images[0][candidate]->getTone()) > 0.01) {
-                drawStroke(stroke, bestStroke, images[0][candidate]);
-                candidates[candidate] = *images[0][candidate];
+        if (toneLevel != numTones - 1) {
+            for (int resolution = 0; resolution < numRes; ++resolution) {
+                *images[toneLevel+1][resolution] = *images[toneLevel][resolution];
+                candidates[resolution] = *images[toneLevel][resolution];
             }
         }
-//        currentImage = images[0][0];
-//        glutPostRedisplay();
     }
-    
 }
 
 

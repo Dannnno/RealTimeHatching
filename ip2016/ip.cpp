@@ -28,8 +28,7 @@ Image* ip_generate_TAM ()
     const char* filepath = "/Users/swarren/Downloads/ip2016skeleton/SampleStrokeBMP.bmp";
     Image* stroke = new Image(filepath);
     stroke = ip_scale(stroke, .7, .7);
-    TAM* t = new TAM(1, 4, stroke);
-    
+    TAM* t = new TAM(2, 2, stroke);
     
     int height = 0;
     for( int i=0; i<t->images[0].size(); i++){
@@ -52,7 +51,7 @@ Image* ip_generate_TAM ()
     for(int y=0; y<t->images[0].size(); y++){
         int xStart=1;
         for(int x=0; x<t->images.size(); x++){
-            cout<< xStart-1 << ":" << yStart-1 << ":" << t->images[x][y]->getHeight() << endl;
+//            cout<< xStart-1 << ":" << yStart-1 << ":" << t->images[x][y]->getHeight() << endl;
             ip_draw_Box(result, xStart-1, yStart-1, t->images[x][y]->getHeight());
             ip_composite(result, t->images[x][y], xStart, yStart);
             xStart += 10 + colWidth;
