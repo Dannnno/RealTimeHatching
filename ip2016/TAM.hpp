@@ -14,7 +14,7 @@
 #include <vector>
 #include "image.h"
 
-void ip_composite(Image* dest, Image* strokeImage, double x, double y);
+void ip_composite(Image* dest, Image* strokeImage, int x, int y);
 Image* ip_scale (Image* src, double xFac, double yFac);
 class TAM{
 struct RandomStroke;
@@ -29,9 +29,10 @@ private:
         double length;
         double x, y;
         double rot;
+        bool horizontal;
     };
     
-    RandomStroke getRandomStroke() const;
+    RandomStroke getRandomStroke(bool isHorizontal) const;
     
     
 

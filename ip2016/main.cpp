@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 #include "control.h"
+#include "SOIL/SOIL.h"
 
 
 /*
@@ -20,6 +21,41 @@ Image* originalImage = NULL;
 bool quietMode = false;
 bool textMode  = false;
 
+void loadTAM(){
+#define NUMBER_OF_TONES 6
+#define NUMBER_OF_RESOLUTIONS 4
+    GLuint textures[NUMBER_OF_TONES];
+    GLenum gl_textures[NUMBER_OF_TONES];
+    for (int i = 0; i < NUMBER_OF_TONES; ++i) {
+        gl_textures[i] = GL_TEXTURE0 + i;
+    }
+    int width, height;
+    unsigned char* image;
+    std::vector<std::vector<std::string>> tamNames(NUMBER_OF_TONES, std::vector<std::string>(NUMBER_OF_RESOLUTIONS));
+    
+    for (int tone = 0; tone < NUMBER_OF_TONES; ++tone) {
+        for (int res = 0; res < NUMBER_OF_RESOLUTIONS; ++res) {
+            char filename[100];
+            sprintf(filename, "/Users/swarren/Downloads/ip2016skeleton/TAM_tone%d_resolution%d.bmp", tone, res);
+            tamNames[tone][res] = std::string(filename);
+        }
+    }
+    
+    for (int tone = 0; tone < NUMBER_OF_TONES; ++tone) {
+        glActiveTexture(gl_textures[tone]);
+        glBindTexture(GL_TEXTURE_2D, textures[tone]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, NUMBER_OF_RESOLUTIONS - 1);
+        
+        for (int resolution = 0; resolution < tamNames[tone].size(); ++resolution) {
+            image = SOIL_load_image(tamNames[tone][resolution].c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+            glTexImage2D(GL_TEXTURE_2D, resolution, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+            SOIL_free_image_data(image);
+        }
+    }
+}
 
 int main (int argc, char** argv)
 {

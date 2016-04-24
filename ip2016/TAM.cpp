@@ -7,15 +7,27 @@
 //
 
 #include "TAM.hpp"
-#include "main.h"
 std::mt19937 rng;
+
+double getActualStrokeLength(double actualPosition, double actualLength, double imageSize) {
+    double normalizedStrokeLength;
+    if(actualPosition < 0){
+        normalizedStrokeLength = max(actualPosition + actualLength, 0)/2;
+    }
+    else if (actualPosition + actualLength >= imageSize) {
+        normalizedStrokeLength = imageSize - actualPosition;
+    } else {
+        normalizedStrokeLength = actualLength;
+    }
+    return normalizedStrokeLength / imageSize;
+}
 
 TAM::TAM(int numTones, int numRes, Image* stroke)
 : images(numTones, std::vector<Image*>(numRes)) {
     std::vector<Image> candidates(numRes);
     
     for (int tone = 0; tone < numTones; ++tone) {
-        int imageSize = 16;
+        int imageSize = 32;
         for (int resolution = 0; resolution < numRes; ++resolution) {
             images[tone][resolution] = new Image(imageSize, imageSize);
             static Pixel white = Pixel(1,1,1);
@@ -30,24 +42,49 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
             imageSize *= 2;
         }
     }
-    double darkestTone =.2;
+    
+    double darkestTone =.9;
+    double lightestTone = .15;
+    double toneInterval;
+    if (numTones == 1) {
+        toneInterval = darkestTone - lightestTone;
+    } else {
+        toneInterval = (darkestTone - lightestTone) / (numTones - 1);
+    }
     for (int toneLevel = 0; toneLevel < numTones; ++toneLevel) {
-        double maxTone = (darkestTone / numTones)* (toneLevel + 1);
-        while (fabs(maxTone - images[toneLevel][numRes-1]->getTone()) > 0.01) {
+        double maxTone = lightestTone + toneInterval * toneLevel;
+        while (fabs(maxTone - images[toneLevel][numRes-1]->getTone()) > (.1/(numRes))) {
             RandomStroke bestStroke;
             double bestTone = -10000;
-            for (int i = 0; i < 10; ++i) {
+            for (int i = 0; i < 25; ++i) {
                 double toneSum = 0;
-                RandomStroke currentStroke = getRandomStroke();
+                bool horizontalStroke = maxTone <= .7;
+                RandomStroke currentStroke = getRandomStroke(horizontalStroke);
                 for (int resolution = 0; resolution < numRes; ++resolution) {
-                    if (fabs(maxTone - images[toneLevel][resolution]->getTone()) > 0.01) {
+                    if (fabs(maxTone - images[toneLevel][resolution]->getTone()) > (.1/(resolution+1.))) {
                         drawStroke(stroke, currentStroke, &candidates[resolution]);
                         // Get the effective length of the stroke, given that it might "run off" the edge
+                        
+                        double withStroke = fabs(maxTone - candidates[resolution].getTone());
+                        double withoutStroke = fabs(maxTone - images[toneLevel][resolution]->getTone());
+                        if (withoutStroke < withStroke) {
+                            continue;
+                        }
                         double toneContribution = candidates[resolution].getTone() - images[toneLevel][resolution]->getTone();
-                        const double width = images[toneLevel][resolution]->getWidth();
-                        toneContribution /=
-                            min((width - currentStroke.x*width),
-                                currentStroke.length * stroke->getWidth()) / width;
+                        // All images are squares, side lengths are equal
+                        const double imageSize = images[toneLevel][resolution]->getWidth();
+                        
+                        double actualStrokeLength = currentStroke.length * stroke->getWidth();
+                        double normalizedStrokeLength;
+                        double actualStrokeX = currentStroke.x*imageSize;
+                        double actualStrokeY = currentStroke.y*imageSize;
+                        if(horizontalStroke){
+                            normalizedStrokeLength = getActualStrokeLength(actualStrokeX, actualStrokeLength, imageSize);
+                        }
+                        else {
+                            normalizedStrokeLength = getActualStrokeLength(actualStrokeY, actualStrokeLength, imageSize);
+                        }
+                        toneContribution /= normalizedStrokeLength;
                         toneSum += toneContribution;
                         candidates[resolution] = *images[toneLevel][resolution];
                     }
@@ -60,13 +97,11 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
             }
             
             for (int candidate = 0; candidate < numRes; ++candidate) {
-                if (fabs(maxTone - images[toneLevel][candidate]->getTone()) > 0.01) {
+                if (fabs(maxTone - images[toneLevel][candidate]->getTone()) > (.1/(candidate + 1.))) {
                     drawStroke(stroke, bestStroke, images[toneLevel][candidate]);
                     candidates[candidate] = *images[toneLevel][candidate];
                 }
             }
-    //        currentImage = images[0][0];
-    //        glutPostRedisplay();
         }
         
         if (toneLevel != numTones - 1) {
@@ -80,18 +115,26 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
 
 
 
-TAM::RandomStroke TAM::getRandomStroke() const{
-    static std::uniform_real_distribution<double> x_dist(-1, 1);
-    static std::uniform_real_distribution<double> y_dist(0, 1);
+TAM::RandomStroke TAM::getRandomStroke(bool isHorizontal) const{
+    static std::uniform_real_distribution<double> positive_dist(0, 1);
+    static std::uniform_real_distribution<double> total_dist(-.2, 1);
+
     static std::uniform_real_distribution<double> length_dist(.3, 1);
     static std::uniform_int_distribution<int> rot_dist(-2, 2);
     
     RandomStroke stroke;
     
     stroke.length = length_dist(rng);
-    stroke.x = x_dist(rng);
-    stroke.y = y_dist(rng);
-    stroke.rot = deg2rad(rot_dist(rng));
+    if(isHorizontal){
+        stroke.x= total_dist(rng);
+        stroke.y = positive_dist(rng);
+    } else {
+        stroke.x = positive_dist(rng);
+        stroke.y = total_dist(rng);
+    }
+    
+    stroke.rot =deg2rad(rot_dist(rng));
+    stroke.horizontal = isHorizontal;
     
     return stroke;
 }
@@ -109,7 +152,7 @@ Pixel ip_resample_bilinear(Image* src, double x, double y)
     
     if (xfloor >= src->getWidth() || xfloor < 0 || xfloor+1 >= src->getWidth() || xfloor+1 < 0 ||
         yfloor >= src->getHeight() || yfloor < 0 || yfloor+1 >= src->getHeight() || yfloor+1 < 0) {
-        return Pixel(0, 0, 0);
+        return Pixel(1, 1, 1);
     }
     
     Pixel p1 = src->getPixel(xfloor, yfloor);
@@ -137,20 +180,34 @@ Pixel ip_resample_bilinear(Image* src, double x, double y)
     return newPixel;
 }
 
+Image* rotate_90(Image*src)
+{
+    Image* dest = new Image(src->getHeight(), src->getWidth());
+    
+    for (int i = 0; i < dest->getWidth(); ++i) {
+        for (int j = 0; j < dest->getHeight(); ++j) {
+            Pixel p = src->getPixel(j, i);
+            dest->setPixel(i, j, p);
+        }
+    }
+
+    return dest;
+}
+
 /*
- * rotate image using one of three sampling techniques
+ * rotate image
  */
 Image* ip_rotate (Image* src, double theta)
 {
     Image* dest = new Image(src->getWidth(), src->getHeight());
     double x = src->getWidth()/2;
     double y = src->getHeight()/2;
-    double ctheta = cos(-theta*M_PI/180.);
-    double stheta = sin(-theta*M_PI/180.);
+    double ctheta = cos(-theta);
+    double stheta = sin(-theta);
     
     for (int i = 0; i < dest->getWidth(); ++i) {
         for (int j = 0; j < dest->getHeight(); ++j) {
-            Pixel p = Pixel(0, 0, 0);
+            Pixel p = Pixel(1, 1, 1);
             dest->setPixel(i, j, p);
         }
     }
@@ -160,9 +217,9 @@ Image* ip_rotate (Image* src, double theta)
             double xp = x + (i-x)*ctheta - (j-y)*stheta;
             double yp = y + (i-x)*stheta + (j-y)*ctheta;
             
-            if (xp >= src->getWidth() || xp < 0 || yp >= src->getHeight() || yp < 0) {
-                continue;
-            }
+//            if (xp >= src->getWidth() || xp < 0 || yp >= src->getHeight() || yp < 0) {
+//                continue;
+//            }
             
             Pixel p = ip_resample_bilinear(src, xp, yp);
             
@@ -174,7 +231,7 @@ Image* ip_rotate (Image* src, double theta)
 }
 
 /*
- * scale image using one of three sampling techniques
+ * scale image
  */
 Image* ip_scale (Image* src, double xFac, double yFac)
 {
@@ -202,19 +259,23 @@ Image* ip_scale (Image* src, double xFac, double yFac)
  * use a mask image for a per-pixel alpha value to perform
  * interpolation with a second image
  */
-void ip_composite(Image* dest, Image* strokeImage, double x, double y)
+void ip_composite(Image* dest, Image* strokeImage, int x, int y)
 {
     static const double whiteThreshold = 1;
-    for (int i = 0; i < strokeImage->getWidth(); ++i) {
-        for (int j = 0; j < strokeImage->getHeight(); ++j) {
-            if((x+i)<dest->getWidth() && (y+j)<dest->getHeight() && (x + i) >= 0) {
+    for (int i = 1; i < strokeImage->getWidth()-1; ++i) {
+        for (int j = 1; j < strokeImage->getHeight()-1; ++j) {
+            if((x+i)<dest->getWidth() && (y+j)<dest->getHeight() && (x + i) >= 0 && (y+j)>=0) {
                 Pixel strokePixel = strokeImage->getPixel(i, j);
-                const bool isWhite = strokePixel.getColor(RED) > whiteThreshold;
-                const double destRed   = isWhite ? dest->getPixel(i, j, RED) : strokeImage->getPixel(i, j, RED);
-                const double destGreen = isWhite ? dest->getPixel(i, j, GREEN) : strokeImage->getPixel(i, j, GREEN);
-                const double destBlue  = isWhite ? dest->getPixel(i, j, BLUE) : strokeImage->getPixel(i, j, BLUE);
-                Pixel p = Pixel(destRed, destGreen, destBlue);
-                dest->setPixel(x + i, y + j, p);
+                Pixel imagePixel = dest->getPixel(x+i, y+j);
+                if(strokePixel.getColor(0)<imagePixel.getColor(0)){
+                    dest->setPixel(x+i, y+j, strokePixel);
+                }
+//                const bool isWhite = strokePixel.getColor(RED) >= whiteThreshold;
+//                const double destRed   = isWhite ? dest->getPixel(x+i, y+j, RED) : strokeImage->getPixel(i, j, RED);
+//                const double destGreen = isWhite ? dest->getPixel(x+i, y+j, GREEN) : strokeImage->getPixel(i, j, GREEN);
+//                const double destBlue  = isWhite ? dest->getPixel(x+i, y+j, BLUE) : strokeImage->getPixel(i, j, BLUE);
+                //Pixel p = Pixel(destRed, destGreen, destBlue);
+                //dest->setPixel(x + i, y + j, p);
             }
         }
     }
@@ -223,7 +284,14 @@ void ip_composite(Image* dest, Image* strokeImage, double x, double y)
 void TAM::drawStroke(Image* strokeImage, RandomStroke strokeModifiers, Image* dest){
     Image* scaledImage = ip_scale(strokeImage, strokeModifiers.length, 1);
     Image* rotImage = ip_rotate(scaledImage, strokeModifiers.rot);
-    ip_composite(dest, strokeImage, strokeModifiers.x*dest->getWidth(), strokeModifiers.y*dest->getHeight());
+    
+    if (!strokeModifiers.horizontal) {
+        Image* old = rotImage;
+        rotImage = rotate_90(rotImage);
+        delete old;
+    }
+    
+    ip_composite(dest, rotImage, strokeModifiers.x*dest->getWidth(), strokeModifiers.y*dest->getHeight());
     delete scaledImage;
     delete rotImage;
 }
