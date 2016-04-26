@@ -12,10 +12,10 @@ std::mt19937 rng;
 double getActualStrokeLength(double actualPosition, double actualLength, double imageSize) {
     double normalizedStrokeLength;
     if(actualPosition < 0){
-        normalizedStrokeLength = max(actualPosition + actualLength, 0)/2;
+        normalizedStrokeLength = max(actualPosition + actualLength, 0);
     }
     else if (actualPosition + actualLength >= imageSize) {
-        normalizedStrokeLength = imageSize - actualPosition;
+        normalizedStrokeLength = (imageSize - actualPosition)*1.13;
     } else {
         normalizedStrokeLength = actualLength;
     }
@@ -217,10 +217,6 @@ Image* ip_rotate (Image* src, double theta)
             double xp = x + (i-x)*ctheta - (j-y)*stheta;
             double yp = y + (i-x)*stheta + (j-y)*ctheta;
             
-//            if (xp >= src->getWidth() || xp < 0 || yp >= src->getHeight() || yp < 0) {
-//                continue;
-//            }
-            
             Pixel p = ip_resample_bilinear(src, xp, yp);
             
             dest->setPixel(i, j, p);
@@ -270,12 +266,6 @@ void ip_composite(Image* dest, Image* strokeImage, int x, int y)
                 if(strokePixel.getColor(0)<imagePixel.getColor(0)){
                     dest->setPixel(x+i, y+j, strokePixel);
                 }
-//                const bool isWhite = strokePixel.getColor(RED) >= whiteThreshold;
-//                const double destRed   = isWhite ? dest->getPixel(x+i, y+j, RED) : strokeImage->getPixel(i, j, RED);
-//                const double destGreen = isWhite ? dest->getPixel(x+i, y+j, GREEN) : strokeImage->getPixel(i, j, GREEN);
-//                const double destBlue  = isWhite ? dest->getPixel(x+i, y+j, BLUE) : strokeImage->getPixel(i, j, BLUE);
-                //Pixel p = Pixel(destRed, destGreen, destBlue);
-                //dest->setPixel(x + i, y + j, p);
             }
         }
     }

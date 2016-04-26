@@ -21,6 +21,7 @@ extern Image* originalImage;
 extern bool quietMode;
 extern bool textMode;
 
+extern double zoomFactor;
 
 int  main (int argc, char** argv);
 char* init (int argc, char** argv);

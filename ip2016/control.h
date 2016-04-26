@@ -23,18 +23,9 @@ void idle_func ();
 void menu_help ();
 void image_load (const char* filename);
 void image_save (const char* filename);
-void image_print_info ();
-void image_revert ();
-void process_func (int value);
 
 // text mode calls
 void textMenuLoop ();
-
-// helper functions
-int getFilterSize();
-int getInt(const char* message);
-double getDouble(const char* message);
-double getPositiveDouble(const char* message);
 
 
 #endif // CONTROL_H

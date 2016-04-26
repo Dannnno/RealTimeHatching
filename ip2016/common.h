@@ -65,4 +65,8 @@
 #define MAP(s,t)		std::map < s, t >
 
 
+#define NUMBER_OF_TONES 6
+#define NUMBER_OF_RESOLUTIONS 4
+
+
 #endif // COMMON_H

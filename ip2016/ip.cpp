@@ -28,7 +28,7 @@ Image* ip_generate_TAM ()
     const char* filepath = "/Users/swarren/Downloads/ip2016skeleton/SampleStrokeBMP.bmp";
     Image stroke = Image(filepath);
     Image* scaledstroke = ip_scale(&stroke, .7, .7);
-    TAM* t = new TAM(6, 4, scaledstroke);
+    TAM* t = new TAM(NUMBER_OF_TONES, NUMBER_OF_RESOLUTIONS, scaledstroke);
     delete scaledstroke;
     
     for(int a=0; a<t->images[0].size();a++){

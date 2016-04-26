@@ -6,14 +6,10 @@
 #include "control.h"
 #include "SOIL/SOIL.h"
 
-
-/*
- * IMPORTANT - DO NOT CHANGE THIS FILE - IMPORTANT
- */
-
-
 int  window_width  = 300;
 int  window_height = 300;
+
+double zoomFactor = 1.;
 
 Image* currentImage  = NULL;
 Image* originalImage = NULL;
@@ -21,14 +17,23 @@ Image* originalImage = NULL;
 bool quietMode = false;
 bool textMode  = false;
 
-void loadTAM(){
-#define NUMBER_OF_TONES 6
-#define NUMBER_OF_RESOLUTIONS 4
-    GLuint textures[NUMBER_OF_TONES];
-    GLenum gl_textures[NUMBER_OF_TONES];
-    for (int i = 0; i < NUMBER_OF_TONES; ++i) {
-        gl_textures[i] = GL_TEXTURE0 + i;
+
+
+void checkGLError() {
+    GLenum errCode = glGetError();
+    if (errCode != GL_NO_ERROR)
+    {
+        const GLubyte* errString = gluErrorString(errCode);
+        cerr << "OpenGL error: " << errString << endl;    } else {
+        cerr << "No error :)" << endl;
     }
+}
+
+
+GLuint textures[NUMBER_OF_TONES];
+
+void loadTAM(){
+    
     int width, height;
     unsigned char* image;
     std::vector<std::vector<std::string>> tamNames(NUMBER_OF_TONES, std::vector<std::string>(NUMBER_OF_RESOLUTIONS));
@@ -42,10 +47,11 @@ void loadTAM(){
     }
     
     for (int tone = 0; tone < NUMBER_OF_TONES; ++tone) {
-        glActiveTexture(gl_textures[tone]);
+        glActiveTexture(GL_TEXTURE0 + tone);
+        textures[tone] = tone;
         glBindTexture(GL_TEXTURE_2D, textures[tone]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, NUMBER_OF_RESOLUTIONS - 1);
         
@@ -55,7 +61,9 @@ void loadTAM(){
             SOIL_free_image_data(image);
         }
     }
+    
 }
+
 
 int main (int argc, char** argv)
 {
@@ -75,7 +83,7 @@ int main (int argc, char** argv)
         glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
         glutInitWindowPosition(100,100);
         glutInitWindowSize(window_width, window_height);
-        glutCreateWindow("hmc cs155 image processor");
+        glutCreateWindow("real-time hatching");
         
         // register call back functions
         glutDisplayFunc(display);
@@ -92,6 +100,9 @@ int main (int argc, char** argv)
         
         if (toLoad)
             image_load(toLoad);
+        
+        
+        loadTAM();
         
         // wait for something to happen
         glutMainLoop();
@@ -159,6 +170,27 @@ void usage ()
     exit(-1);
 }
 
+void draw_cube(int size, int x, int y, int z) {
+    glPushMatrix();
+    glBegin(GL_QUADS);
+    glTexCoord2i(0, 0); glVertex3f(x, y, z);
+    glTexCoord2i(0, 1); glVertex3f(x, y+size, z);
+    glTexCoord2i(1, 1); glVertex3f(x+size, y+size, z);
+    glTexCoord2i(1, 0); glVertex3f(x+size, y, z);
+    glEnd();
+    glPopMatrix();
+}
+
+void draw_test_cubes() {
+//    glEnable(GL_TEXTURE_2D);
+    glColor3d(1, 1, 1);
+    for (int i = 0; i < NUMBER_OF_TONES; ++i) {
+//        glBindTexture(GL_TEXTURE_2D, textures[i]);
+        draw_cube(2, i, 0, 0);
+    }
+//    glDisable(GL_TEXTURE_2D);
+}
+
 
 void display ()
 {
@@ -177,8 +209,13 @@ void display ()
     glClear(GL_COLOR_BUFFER_BIT);
     
     // draw the image
-    if (currentImage)
+    if (currentImage) {
         currentImage->glDrawPixelsWrapper();
+    } else {
+        cerr << "here" << endl;
+        gluLookAt(10, 2*zoomFactor, 10, 0, 0, 0, 0, 1, 0);
+        draw_test_cubes();
+    }
     
     // swap buffers
     glutSwapBuffers();
