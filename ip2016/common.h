@@ -66,7 +66,7 @@
 
 
 #define NUMBER_OF_TONES 6
-#define NUMBER_OF_RESOLUTIONS 4
+#define NUMBER_OF_RESOLUTIONS 6
 
 
 #endif // COMMON_H

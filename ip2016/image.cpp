@@ -376,6 +376,14 @@ void Image::setPixel (int x, int y, Pixel& pixel)
 
 }
 
+void Image::fillImage(Pixel p){
+    for (int x=0; x<width; x++){
+        for(int y=0; y<height; y++){
+            setPixel(x, y, p);
+        }
+    }
+
+}
 
 /*  set pixel value, clamping to [0,1]    */
 /*  if any problem with parameters RETURN */

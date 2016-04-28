@@ -15,7 +15,7 @@ double getActualStrokeLength(double actualPosition, double actualLength, double 
         normalizedStrokeLength = max(actualPosition + actualLength, 0);
     }
     else if (actualPosition + actualLength >= imageSize) {
-        normalizedStrokeLength = (imageSize - actualPosition)*1.13;
+        normalizedStrokeLength = (imageSize - actualPosition)*1.15;
     } else {
         normalizedStrokeLength = actualLength;
     }
@@ -27,21 +27,20 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
     std::vector<Image> candidates(numRes);
     
     for (int tone = 0; tone < numTones; ++tone) {
-        int imageSize = 32;
+        int imageSize = 1;
         for (int resolution = 0; resolution < numRes; ++resolution) {
             images[tone][resolution] = new Image(imageSize, imageSize);
             static Pixel white = Pixel(1,1,1);
-            for (int i=0; i < imageSize; i++) {
-                for (int j=0; j < imageSize; j++) {
-                    images[tone][resolution]->setPixel(i, j, white);
-                }
-            }
+            images[tone][resolution]->fillImage(white);
             if (tone == 0) {
                 candidates[resolution] = Image(imageSize, imageSize);
             }
             imageSize *= 2;
         }
     }
+    
+    
+    
     
     double darkestTone =.9;
     double lightestTone = .15;
@@ -53,15 +52,15 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
     }
     for (int toneLevel = 0; toneLevel < numTones; ++toneLevel) {
         double maxTone = lightestTone + toneInterval * toneLevel;
-        while (fabs(maxTone - images[toneLevel][numRes-1]->getTone()) > (.1/(numRes))) {
+        while (fabs(maxTone - images[toneLevel][numRes-1]->getTone()) > (.1/(numRes-3))) {
             RandomStroke bestStroke;
             double bestTone = -10000;
             for (int i = 0; i < 25; ++i) {
                 double toneSum = 0;
                 bool horizontalStroke = maxTone <= .7;
                 RandomStroke currentStroke = getRandomStroke(horizontalStroke);
-                for (int resolution = 0; resolution < numRes; ++resolution) {
-                    if (fabs(maxTone - images[toneLevel][resolution]->getTone()) > (.1/(resolution+1.))) {
+                for (int resolution = 3; resolution < numRes; ++resolution) {
+                    if (fabs(maxTone - images[toneLevel][resolution]->getTone()) > (.1/(resolution-3+1.))) {
                         drawStroke(stroke, currentStroke, &candidates[resolution]);
                         // Get the effective length of the stroke, given that it might "run off" the edge
                         
@@ -96,12 +95,19 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
                 }
             }
             
-            for (int candidate = 0; candidate < numRes; ++candidate) {
-                if (fabs(maxTone - images[toneLevel][candidate]->getTone()) > (.1/(candidate + 1.))) {
+            
+            for (int candidate = 3; candidate < numRes; ++candidate) {
+                if (fabs(maxTone - images[toneLevel][candidate]->getTone()) > (.1/(candidate-3 + 1.))) {
                     drawStroke(stroke, bestStroke, images[toneLevel][candidate]);
                     candidates[candidate] = *images[toneLevel][candidate];
                 }
             }
+        }
+
+        for (int resolution=0; resolution<3; resolution++){
+            float greyLevel = 1-maxTone;
+            Pixel grey(greyLevel, greyLevel, greyLevel);
+            images[toneLevel][resolution]->fillImage(grey);
         }
         
         if (toneLevel != numTones - 1) {
@@ -204,14 +210,8 @@ Image* ip_rotate (Image* src, double theta)
     double y = src->getHeight()/2;
     double ctheta = cos(-theta);
     double stheta = sin(-theta);
-    
-    for (int i = 0; i < dest->getWidth(); ++i) {
-        for (int j = 0; j < dest->getHeight(); ++j) {
-            Pixel p = Pixel(1, 1, 1);
-            dest->setPixel(i, j, p);
-        }
-    }
-    
+    Pixel white = Pixel(1, 1, 1);
+    dest->fillImage(white);
     for (int i = 0; i < dest->getWidth(); ++i) {
         for (int j = 0; j < dest->getHeight(); ++j) {
             double xp = x + (i-x)*ctheta - (j-y)*stheta;

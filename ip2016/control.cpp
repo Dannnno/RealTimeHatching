@@ -47,7 +47,7 @@ void menu_func (int value)
     // variables used in the switch statement
     char filename[MAX_LINE];
     
-    if (currentImage) delete currentImage;
+//    if (currentImage) delete currentImage;
     
     switch (value)
     {
@@ -57,35 +57,34 @@ void menu_func (int value)
         case M_HELP:  // enum #1
             menu_help();
             break;
-        case M_FILE_SAVE:   // enum #3
-            if (!quietMode)
-                cerr << "Save as (string - no spaces) : ";
-            cin  >> filename;
-            checkStream(cin);
-            image_save(filename);
-            break;
-            
-        case M_GEN_TAM:
-            currentImage = ip_generate_TAM();
-            
-            if (currentImage->getWidth()  != window_width    ||
-                currentImage->getHeight() != window_height)
-            {
-                reshape(currentImage->getWidth(), currentImage->getHeight());
-            }
-            
-            if (!quietMode)
-            {
-                cerr << "done!" << endl;
-            }
-            
-            if (!textMode)
-            {
-                glutPostRedisplay();
-            }
-            
-            break;
-            
+//        case M_FILE_SAVE:   // enum #3
+//            cerr << "Save as (string - no spaces) : ";
+//            cin  >> filename;
+//            checkStream(cin);
+//            image_save(filename);
+//            break;
+////
+//        case M_GEN_TAM:
+//            currentImage = ip_generate_TAM();
+//            
+//            if (currentImage->getWidth()  != window_width    ||
+//                currentImage->getHeight() != window_height)
+//            {
+//                reshape(currentImage->getWidth(), currentImage->getHeight());
+//            }
+//            
+//            if (!quietMode)
+//            {
+//                cerr << "done!" << endl;
+//            }
+//            
+//            if (!textMode)
+//            {
+//                glutPostRedisplay();
+//            }
+//            
+//            break;
+//            
         default:
             cerr << "Tried to use value " << value << " but not yet implemented" << endl;
     }
@@ -104,12 +103,12 @@ void keyboard_func (unsigned char key, int x, int y)
         case 'q':
             exit(0);
             break;
-        case 'z':
-            ++zoomFactor;
-            break;
-        case 'Z':
-            --zoomFactor;
-            break;
+//        case 'z':
+//            ++zoomFactor;
+//            break;
+//        case 'Z':
+//            --zoomFactor;
+//            break;
     }
     
     glutPostRedisplay();
@@ -128,108 +127,61 @@ void menu_help ()
 
 #define MENUOP(num, tag)	cerr << " " << num << ") " << tag << endl;
 
-void textMenuLoop ()
-{
-    char command[MAX_LINE];
-    
-    while (true)
-    {
-        if (!quietMode)
-            cerr << endl
-            << "selection > " << flush;
-        cin  >> command;
-        
-        switch (command[0])
-        {
-            case '\n':
-            case '\0':
-                //printMenu();
-                break;
-                
-            case 'Q':
-            case 'q':
-                menu_func(M_QUIT);
-                break;
-                
-            case 'H':
-            case 'h':
-                menu_func(M_HELP);
-                break;
-                
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                menu_func(atoi(command));
-                break;
-                
-            default:
-                //printMenu();
-                break;
-        }
-    }
-}
 
 
 void image_load (const char* filename)
 {
-    if (currentImage)
-        delete currentImage;
-    if (originalImage)
-        delete originalImage;
-    currentImage  = NULL;
-    originalImage = NULL;
-    
-    originalImage = new Image();
-    originalImage->readBMP(filename);
-    
-    if (originalImage->good())
-    {
-        currentImage = new Image(*originalImage);
-        reshape(currentImage->getWidth(), currentImage->getHeight());
-    }
-    else
-    {
-        delete originalImage;
-        originalImage = NULL;
-        cerr << "Couldn't load image " << filename << "!" << endl;
-        return;
-    }
-    
-    if (!textMode)
-        glutPostRedisplay();
-    
-    if (!quietMode)
-        cerr << "done!" << endl;
+//    if (currentImage)
+//        delete currentImage;
+//    if (originalImage)
+//        delete originalImage;
+//    currentImage  = NULL;
+//    originalImage = NULL;
+//    
+//    originalImage = new Image();
+//    originalImage->readBMP(filename);
+//    
+//    if (originalImage->good())
+//    {
+//        currentImage = new Image(*originalImage);
+//        reshape(currentImage->getWidth(), currentImage->getHeight());
+//    }
+//    else
+//    {
+//        delete originalImage;
+//        originalImage = NULL;
+//        cerr << "Couldn't load image " << filename << "!" << endl;
+//        return;
+//    }
+//    
+//    if (!textMode)
+//        glutPostRedisplay();
+//    
+//    if (!quietMode)
+//        cerr << "done!" << endl;
 }
 
 
 void image_save (const char* filename)
 {
-    if (currentImage)
-    {
-        if (currentImage->writeBMP(filename) == 0)
-        {
-            //delete originalImage;
-            //originalImage = new Image(*currentImage);
-        }
-    }
-    else if (originalImage)
-    {
-        originalImage->writeBMP(filename);
-    }
-    else
-    {
-        cerr << "No image!" << endl;
-        return;
-    }
-    
-    if (!quietMode)
-        cerr << "done!" << endl;
+//    if (currentImage)
+//    {
+//        if (currentImage->writeBMP(filename) == 0)
+//        {
+//            //delete originalImage;
+//            //originalImage = new Image(*currentImage);
+//        }
+//    }
+//    else if (originalImage)
+//    {
+//        originalImage->writeBMP(filename);
+//    }
+//    else
+//    {
+//        cerr << "No image!" << endl;
+//        return;
+//    }
+//    
+//    if (!quietMode)
+//        cerr << "done!" << endl;
 }

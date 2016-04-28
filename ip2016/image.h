@@ -106,6 +106,7 @@ public:
 	void		setPixel  (int x, int y, Pixel& pixel);
 	void		setPixel_ (int x, int y, Pixel& pixel);
     
+    void        fillImage(Pixel p);
     double getTone();
     
 	// OpenGL call wrappers

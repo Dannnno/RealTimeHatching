@@ -12,16 +12,16 @@
 #include "common.h"
 #include "image.h"
 
-extern int window_width;
-extern int window_height;
-
-extern Image* currentImage;
-extern Image* originalImage;
-
-extern bool quietMode;
-extern bool textMode;
-
-extern double zoomFactor;
+//extern int window_width;
+//extern int window_height;
+//
+//extern Image* currentImage;
+//extern Image* originalImage;
+//
+//extern bool quietMode;
+//extern bool textMode;
+//
+//extern double zoomFactor;
 
 int  main (int argc, char** argv);
 char* init (int argc, char** argv);
