@@ -6,7 +6,6 @@
 #include <math.h>
 #include "SOIL/SOIL.h"
 #include "ip.h"
-
 using std::cerr;
 using std::endl;
 
@@ -18,6 +17,8 @@ void mouse(int button, int state, int x, int y);
 void motion(int x, int y);
 void init();
 
+#define X .525731112119133606
+#define Z .850650808352039932
 
 GLuint textures[NUMBER_OF_TONES];
 GLfloat lightPosition[]={5, 5, 5,1};
@@ -31,6 +32,162 @@ void checkGLError() {
             cerr << "No error :)" << endl;
         }
 }
+
+
+
+static GLfloat vdata[12][3] = {
+    {-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z}, {X, 0.0, -Z},
+    {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
+    {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}
+};
+
+static GLuint tindices[20][3] = {
+    {0,4,1}, {0,9,4}, {9,5,4}, {4,5,8}, {4,8,1},
+    {8,10,1}, {8,3,10}, {5,3,8}, {5,2,3}, {2,7,3},
+    {7,10,3}, {7,6,10}, {7,11,6}, {11,0,6}, {0,1,6},
+    {6,1,10}, {9,0,11}, {9,11,2}, {9,2,5}, {7,2,11} };
+void normalize(GLfloat *a) {
+    GLfloat d=sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);
+    a[0]/=d; a[1]/=d; a[2]/=d;
+}
+
+double dot (GLfloat left[3], GLfloat right[3]) {
+    return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
+}
+
+GLfloat getLightValue(GLfloat* normal, GLfloat* vertexPosition, GLfloat* lightDir, GLfloat* cameraPos) {
+    
+    GLfloat normalizedLight[3] = {lightDir[0], lightDir[1], lightDir[2]};
+    GLfloat normalizedNormal[3] = {normal[0], normal[1], normal[2]};
+    normalize(normalizedLight);
+    normalize(normalizedNormal);
+    double angleFactor = -1*dot(normalizedLight, normalizedNormal);
+    if (angleFactor<0)
+        return 0;  // light is falling on other side of surface
+    else
+        return angleFactor;
+
+    //implement specular later (maybe)
+//    float lightDirDotNormal = 2*angleFactor;
+//    
+//    GLfloat reflect[3]={lightDir[0]+normal[0]*lightDirDotNormal, lightDir[1]+normal[1]*lightDirDotNormal,
+//        lightDir[2]+normal[2]*lightDirDotNormal};
+//        //direction - info.normal*(2*direction.dot(info.normal));
+//    float reflectionLength = sqrt(pow(reflect[0],2)+pow(reflect[1],2)+pow(reflect[2],2));
+//    reflect[0]/=reflectionLength;
+//    reflect[1]/=reflectionLength;
+//    reflect[2]/=reflectionLength;
+//    double angleFactor = - reflect.dot(info.theRay.getDir());
+//    if (angleFactor<0)
+//    return Color3d(0,0,0);
+//    else {
+//    angleFactor = pow(angleFactor,info.material->getKshine());
+//    return   color * info.material->getSpecular() * angleFactor;
+}
+
+int getTextureIndex(GLfloat colorValue){
+    //colorValue = 1 - colorValue;
+    double darkestTone =.9;
+    double lightestTone = .15;
+    double toneInterval;
+    int closestIndex = -1;
+    double smallestDiff= 100;
+    
+    if (NUMBER_OF_TONES == 1) {
+        toneInterval = darkestTone - lightestTone;
+    } else {
+        toneInterval = (darkestTone - lightestTone) / (NUMBER_OF_TONES - 1);
+    }
+    for (int toneLevel = 0; toneLevel < NUMBER_OF_TONES; ++toneLevel) {
+        double maxTone = lightestTone + toneInterval * toneLevel;
+        double newDiff = fabs(maxTone - colorValue);
+        if (newDiff<smallestDiff){
+            smallestDiff= newDiff;
+            closestIndex=toneLevel;
+        }
+    }
+    return closestIndex;
+}
+
+GLfloat** sortVertices(GLfloat *a, GLfloat* b, GLfloat* c, int axis) {
+    GLfloat* vertices[3] = {a, b, c};
+    std::sort(vertices, vertices + 3, [=](GLfloat* l, GLfloat* r) { return l[axis] < r[axis]; });
+    return vertices;
+}
+
+
+void drawtri(GLfloat *a, GLfloat *b, GLfloat *c, int div, float r) {
+    if (div<=0) {
+        GLfloat lightVal = getLightValue(a, a, lightPosition, NULL);
+        int texIndex = getTextureIndex(lightVal);
+        glActiveTexture(textures[texIndex]);
+        glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
+        glBegin(GL_TRIANGLES);
+        // Sort the textures by y coordinate to determine orientation
+        GLfloat** sortedByYCoordinates = sortVertices(a, b, c, 1);
+        GLfloat* v0 = sortedByYCoordinates[0];
+        GLfloat* v1 = sortedByYCoordinates[1];
+        GLfloat* v2 = sortedByYCoordinates[2];
+        if (fabs(v0[1] - v1[1]) < fabs(v1[1] - v2[1])) {
+            if (v0[0] < v1[0]) {
+                // We look like this:
+                //      2
+                //   0     1
+                
+                glNormal3fv(v0); glTexCoord2i(0, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                glNormal3fv(v1); glTexCoord2i(1, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+            } else {
+                // We look like this:
+                //      2
+                //   1     0
+                
+                glNormal3fv(v1); glTexCoord2i(0, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                glNormal3fv(v0); glTexCoord2i(1, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+            }
+        } else {
+            if (v2[0] < v1[0]) {
+                // We look like this:
+                //     2     1
+                //        0
+                glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                glNormal3fv(v1); glTexCoord2i(1, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                glNormal3fv(v2); glTexCoord2i(0, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+            } else {
+                // We look like this:
+                //     1     2
+                //        0
+                glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                glNormal3fv(v2); glTexCoord2i(1, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+                glNormal3fv(v1); glTexCoord2i(0, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+            }
+        }
+        glEnd();
+    } else {
+        GLfloat ab[3], ac[3], bc[3];
+        for (int i=0;i<3;i++) {
+            ab[i]=(a[i]+b[i])/2;
+            ac[i]=(a[i]+c[i])/2;
+            bc[i]=(b[i]+c[i])/2;
+        }
+        normalize(ab); normalize(ac); normalize(bc);
+        drawtri(a, ab, ac, div-1, r);
+        drawtri(b, bc, ab, div-1, r);
+        drawtri(c, ac, bc, div-1, r);
+        drawtri(ab, bc, ac, div-1, r);  //<--Comment this line and sphere looks really cool!
+    }
+}
+void drawsphere(int ndiv, float radius=1.0) {
+    glEnable(GL_TEXTURE_2D);
+    
+//    glBegin(GL_TRIANGLES);
+    for (int i=0;i<20;i++)
+        drawtri(vdata[tindices[i][0]], vdata[tindices[i][1]], vdata[tindices[i][2]], ndiv, radius);
+    glDisable(GL_TEXTURE_2D);
+//    glEnd();
+}
+
 
 void loadTAM(){
     
@@ -95,9 +252,8 @@ int main(int argc, char **argv)
     
     // initalize opengl parameters
     init();
-   ip_generate_TAM();
+   //ip_generate_TAM();
     loadTAM();
-    
     // loop until something happens
     glutMainLoop();
     return 0;
@@ -169,11 +325,9 @@ void reshape(int width, int height)
     
 }
 
-//void drawSphere(int slices, int stacks, int radius)
 
-//void drawQuad(float v1 [3], float v2 [3], float v3 [3], float v4 [3]){
-//    
-//}
+
+
 
 void display()
 {
@@ -197,24 +351,26 @@ void display()
     
     glNormal3f(0,0,1);
     glNormal3f(1,0,0);
-    
-    
-    glEnable(GL_TEXTURE_2D);
     glColor3d(1, 1, 1);
-    for (int i = -3; i < 3; i += 1) {
-        glActiveTexture(textures[i+3]); //GL_TEXTURE0 + i + 3);
-        glBindTexture(GL_TEXTURE_2D, textures[i+3]);
-        int x = i, y = 0, z = 0, size = 1;
-        glPushMatrix();
-        glBegin(GL_QUADS);
-        glTexCoord2i(0, 0); glVertex3f(x, y, z);
-        glTexCoord2i(1, 0); glVertex3f(x, y+size, z);
-        glTexCoord2i(1, 1); glVertex3f(x+size, y+size, z);
-        glTexCoord2i(0, 1); glVertex3f(x+size, y, z);
-        glEnd();
-        glPopMatrix();
-    }
-        glDisable(GL_TEXTURE_2D);
+
+    drawsphere(1);
+    
+//    glEnable(GL_TEXTURE_2D);
+//    for (int i = -3; i < 3; i += 1) {
+//        glActiveTexture(textures[i+3]); //GL_TEXTURE0 + i + 3);
+//        glBindTexture(GL_TEXTURE_2D, textures[i+3]);
+//        int x = i, y = 0, z = 0, size = 1;
+//        glPushMatrix();
+//        glBegin(GL_QUADS);
+//        glTexCoord2i(0, 0); glVertex3f(x, y, z);
+//        glTexCoord2i(1, 0); glVertex3f(x, y+size, z);
+//        glTexCoord2i(1, 1); glVertex3f(x+size, y+size, z);
+//        glTexCoord2i(0, 1); glVertex3f(x+size, y, z);
+//        glEnd();
+//        glPopMatrix();
+//    }
+//        glDisable(GL_TEXTURE_2D);
+    
 
 //    // draw a red triangle
 //    glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
