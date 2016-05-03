@@ -55,6 +55,30 @@ double dot (GLfloat left[3], GLfloat right[3]) {
     return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
 }
 
+int getTextureIndex(GLfloat colorValue){
+    //colorValue = 1 - colorValue;
+    double darkestTone =.9;
+    double lightestTone = .15;
+    double toneInterval;
+    int closestIndex = -1;
+    double smallestDiff= 100;
+    
+    if (NUMBER_OF_TONES == 1) {
+        toneInterval = darkestTone - lightestTone;
+    } else {
+        toneInterval = (darkestTone - lightestTone) / (NUMBER_OF_TONES - 1);
+    }
+    for (int toneLevel = 0; toneLevel < NUMBER_OF_TONES; ++toneLevel) {
+        double maxTone = lightestTone + toneInterval * toneLevel;
+        double newDiff = fabs(maxTone - colorValue);
+        if (newDiff<smallestDiff){
+            smallestDiff= newDiff;
+            closestIndex=toneLevel;
+        }
+    }
+    return closestIndex;
+}
+
 GLfloat getLightValue(GLfloat* normal, GLfloat* vertexPosition, GLfloat* lightDir, GLfloat* cameraPos) {
     
     GLfloat normalizedLight[3] = {lightDir[0], lightDir[1], lightDir[2]};
@@ -85,28 +109,51 @@ GLfloat getLightValue(GLfloat* normal, GLfloat* vertexPosition, GLfloat* lightDi
 //    return   color * info.material->getSpecular() * angleFactor;
 }
 
-int getTextureIndex(GLfloat colorValue){
-    //colorValue = 1 - colorValue;
-    double darkestTone =.9;
-    double lightestTone = .15;
-    double toneInterval;
-    int closestIndex = -1;
-    double smallestDiff= 100;
-    
-    if (NUMBER_OF_TONES == 1) {
-        toneInterval = darkestTone - lightestTone;
-    } else {
-        toneInterval = (darkestTone - lightestTone) / (NUMBER_OF_TONES - 1);
+void drawCylinder(int slices, int height, int radius){
+    double angleFraction = (M_PI*2)/slices;
+    for(int i=0; i<=slices; i++){
+        
+        // Draw the top and bottom circles
+        glBegin(GL_TRIANGLES);
+        glNormal3f(0, 1, 0);
+        glVertex3f(0, height, 0);
+        glVertex3f(radius*cos(i*angleFraction), height, radius*sin(i*angleFraction));
+        glVertex3f(radius*cos((i+1)*angleFraction), height, radius*sin((i+1)*angleFraction));
+        
+        glNormal3f(0, -1, 0);
+        glVertex3f(0, 0, 0);
+        glVertex3f(radius*cos(i*angleFraction), 0, radius*sin(i*angleFraction));
+        glVertex3f(radius*cos((i+1)*angleFraction), 0, radius*sin((i+1)*angleFraction));
+        glEnd();
+        
+        // Draw the side
+        GLfloat v0[3] = {
+            static_cast<GLfloat>(radius*cos(i*angleFraction)),
+            static_cast<GLfloat>(height),
+            static_cast<GLfloat>(radius*sin(i*angleFraction))
+        };
+        GLfloat normal[3] = {
+            static_cast<GLfloat>(cos((i+.5)*angleFraction)),
+            static_cast<GLfloat>(0),
+            static_cast<GLfloat>(sin((i+.5)*angleFraction))
+        };
+        
+        GLfloat lightValue = getLightValue(v0, normal, lightPosition, nullptr);
+        int texIndex = getTextureIndex(lightValue);
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(textures[texIndex]);
+        cout << lightValue << ": " << texIndex << endl; 
+        glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
+        glBegin(GL_QUADS);
+        glNormal3f(normal[0], normal[1], normal[2]);
+        glTexCoord2i(0, 1); glVertex3f(v0[0], v0[1], v0[2]);
+        glTexCoord2i(1, 1); glVertex3f(radius*cos((i+1)*angleFraction), height, radius*sin((i+1)*angleFraction));
+        glTexCoord2i(1, 0); glVertex3f(radius*cos((i+1)*angleFraction), 0, radius*sin((i+1)*angleFraction));
+        glTexCoord2i(0, 0); glVertex3f(radius*cos(i*angleFraction), 0, radius*sin(i*angleFraction));
+        glDisable(GL_TEXTURE_2D);
+        glEnd();
+        
     }
-    for (int toneLevel = 0; toneLevel < NUMBER_OF_TONES; ++toneLevel) {
-        double maxTone = lightestTone + toneInterval * toneLevel;
-        double newDiff = fabs(maxTone - colorValue);
-        if (newDiff<smallestDiff){
-            smallestDiff= newDiff;
-            closestIndex=toneLevel;
-        }
-    }
-    return closestIndex;
 }
 
 GLfloat** sortVertices(GLfloat *a, GLfloat* b, GLfloat* c, int axis) {
@@ -118,52 +165,61 @@ GLfloat** sortVertices(GLfloat *a, GLfloat* b, GLfloat* c, int axis) {
 
 void drawtri(GLfloat *a, GLfloat *b, GLfloat *c, int div, float r) {
     if (div<=0) {
-        GLfloat lightVal = getLightValue(a, a, lightPosition, NULL);
-        int texIndex = getTextureIndex(lightVal);
-        glActiveTexture(textures[texIndex]);
-        glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
-        glBegin(GL_TRIANGLES);
-        // Sort the textures by y coordinate to determine orientation
-        GLfloat** sortedByYCoordinates = sortVertices(a, b, c, 1);
-        GLfloat* v0 = sortedByYCoordinates[0];
-        GLfloat* v1 = sortedByYCoordinates[1];
-        GLfloat* v2 = sortedByYCoordinates[2];
-        if (fabs(v0[1] - v1[1]) < fabs(v1[1] - v2[1])) {
-            if (v0[0] < v1[0]) {
-                // We look like this:
-                //      2
-                //   0     1
-                
-                glNormal3fv(v0); glTexCoord2i(0, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                glNormal3fv(v1); glTexCoord2i(1, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+        glEnable(GL_BLEND);
+        glEnable(GL_COLOR_MATERIAL);
+        
+        glColor4f(1.0f, 1.0f, 1.0f, (.4f));
+        GLfloat lightVal[3] = {getLightValue(a, a, lightPosition, NULL), getLightValue(b, b, lightPosition, NULL),getLightValue(c, c, lightPosition, NULL)};
+        int texIndex[3] = {getTextureIndex(lightVal[0]), getTextureIndex(lightVal[1]), getTextureIndex(lightVal[2])};
+        for (int i=0; i<3; i++) {
+            glActiveTexture(textures[texIndex[i]]);
+            glBindTexture(GL_TEXTURE_2D, textures[texIndex[i]]);
+            glBegin(GL_TRIANGLES);
+            // Sort the textures by y coordinate to determine orientation
+            GLfloat** sortedByYCoordinates = sortVertices(a, b, c, 1);
+            GLfloat* v0 = sortedByYCoordinates[0];
+            GLfloat* v1 = sortedByYCoordinates[1];
+            GLfloat* v2 = sortedByYCoordinates[2];
+            if (fabs(v0[1] - v1[1]) < fabs(v1[1] - v2[1])) {
+                if (v0[0] < v1[0]) {
+                    // We look like this:
+                    //      2
+                    //   0     1
+                    
+                    glNormal3fv(v0); glTexCoord2i(0, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                    glNormal3fv(v1); glTexCoord2i(1, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+                } else {
+                    // We look like this:
+                    //      2
+                    //   1     0
+                    
+                    glNormal3fv(v1); glTexCoord2i(0, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                    glNormal3fv(v0); glTexCoord2i(1, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+                }
             } else {
-                // We look like this:
-                //      2
-                //   1     0
-                
-                glNormal3fv(v1); glTexCoord2i(0, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                glNormal3fv(v0); glTexCoord2i(1, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+                if (v2[0] < v1[0]) {
+                    // We look like this:
+                    //     2     1
+                    //        0
+                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                    glNormal3fv(v1); glTexCoord2i(1, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                    glNormal3fv(v2); glTexCoord2i(0, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+                } else {
+                    // We look like this:
+                    //     1     2
+                    //        0
+                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+                    glNormal3fv(v2); glTexCoord2i(1, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+                    glNormal3fv(v1); glTexCoord2i(0, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+                }
             }
-        } else {
-            if (v2[0] < v1[0]) {
-                // We look like this:
-                //     2     1
-                //        0
-                glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                glNormal3fv(v1); glTexCoord2i(1, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                glNormal3fv(v2); glTexCoord2i(0, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-            } else {
-                // We look like this:
-                //     1     2
-                //        0
-                glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                glNormal3fv(v2); glTexCoord2i(1, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-                glNormal3fv(v1); glTexCoord2i(0, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-            }
+            glEnd();
         }
-        glEnd();
+        glDisable(GL_BLEND);
+        glDisable(GL_COLOR_MATERIAL);
     } else {
         GLfloat ab[3], ac[3], bc[3];
         for (int i=0;i<3;i++) {
@@ -207,7 +263,7 @@ void loadTAM(){
     for (int tone = 0; tone < NUMBER_OF_TONES; ++tone) {
         glBindTexture(GL_TEXTURE_2D, textures[tone]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 8);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
@@ -345,7 +401,7 @@ void display()
     glLoadIdentity();
     
     // set viewpoint position/orientation
-    gluLookAt(20*sin(phi*3.14/180.0),10,20*cos(phi*3.14/180.0),0,0,0,0,1,0);
+    gluLookAt(10*sin(phi*3.14/180.0),5,10*cos(phi*3.14/180.0),0,0,0,0,1,0);
     // position of light0
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     
@@ -353,7 +409,10 @@ void display()
     glNormal3f(1,0,0);
     glColor3d(1, 1, 1);
 
-    drawsphere(1);
+//    drawsphere(1);
+    
+    drawCylinder(20, 1, 1);
+    
     
 //    glEnable(GL_TEXTURE_2D);
 //    for (int i = -3; i < 3; i += 1) {
