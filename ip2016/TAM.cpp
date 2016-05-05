@@ -70,20 +70,20 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
                             continue;
                         }
                         double toneContribution = candidates[resolution].getTone() - images[toneLevel][resolution]->getTone();
-                        // All images are squares, side lengths are equal
-                        const double imageSize = images[toneLevel][resolution]->getWidth();
-                        
-                        double actualStrokeLength = currentStroke.length * stroke->getWidth();
-                        double normalizedStrokeLength;
-                        double actualStrokeX = currentStroke.x*imageSize;
-                        double actualStrokeY = currentStroke.y*imageSize;
-                        if(horizontalStroke){
-                            normalizedStrokeLength = getActualStrokeLength(actualStrokeX, actualStrokeLength, imageSize);
-                        }
-                        else {
-                            normalizedStrokeLength = getActualStrokeLength(actualStrokeY, actualStrokeLength, imageSize);
-                        }
-                        toneContribution /= normalizedStrokeLength;
+//                        // All images are squares, side lengths are equal
+//                        const double imageSize = images[toneLevel][resolution]->getWidth();
+//                        
+//                        double actualStrokeLength = currentStroke.length * stroke->getWidth();
+//                        double normalizedStrokeLength;
+//                        double actualStrokeX = currentStroke.x*imageSize;
+//                        double actualStrokeY = currentStroke.y*imageSize;
+//                        if(horizontalStroke){
+//                            normalizedStrokeLength = getActualStrokeLength(actualStrokeX, actualStrokeLength, imageSize);
+//                        }
+//                        else {
+//                            normalizedStrokeLength = getActualStrokeLength(actualStrokeY, actualStrokeLength, imageSize);
+//                        }
+                        toneContribution /= currentStroke.length;
                         toneSum += toneContribution;
                         candidates[resolution] = *images[toneLevel][resolution];
                     }
@@ -123,7 +123,7 @@ TAM::TAM(int numTones, int numRes, Image* stroke)
 
 TAM::RandomStroke TAM::getRandomStroke(bool isHorizontal) const{
     static std::uniform_real_distribution<double> positive_dist(0, 1);
-    static std::uniform_real_distribution<double> total_dist(-.2, 1);
+    static std::uniform_real_distribution<double> total_dist(0, 1);
 
     static std::uniform_real_distribution<double> length_dist(.3, 1);
     static std::uniform_int_distribution<int> rot_dist(-2, 2);
@@ -260,12 +260,12 @@ void ip_composite(Image* dest, Image* strokeImage, int x, int y)
     static const double whiteThreshold = 1;
     for (int i = 1; i < strokeImage->getWidth()-1; ++i) {
         for (int j = 1; j < strokeImage->getHeight()-1; ++j) {
-            if((x+i)<dest->getWidth() && (y+j)<dest->getHeight() && (x + i) >= 0 && (y+j)>=0) {
+//            if((x+i)<dest->getWidth() && (y+j)<dest->getHeight() && (x + i) >= 0 && (y+j)>=0) {
                 Pixel strokePixel = strokeImage->getPixel(i, j);
-                Pixel imagePixel = dest->getPixel(x+i, y+j);
+                Pixel imagePixel = dest->getPixel((x+i)%dest->getWidth(), (y+j)%dest->getWidth());
                 if(strokePixel.getColor(0)<imagePixel.getColor(0)){
-                    dest->setPixel(x+i, y+j, strokePixel);
-                }
+                    dest->setPixel((x+i)%dest->getWidth(), (y+j)%dest->getWidth(), strokePixel);
+                
             }
         }
     }

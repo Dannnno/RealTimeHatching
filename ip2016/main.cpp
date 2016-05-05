@@ -79,7 +79,16 @@ int getTextureIndex(GLfloat colorValue){
     return closestIndex;
 }
 
-GLfloat getLightValue(GLfloat* normal, GLfloat* vertexPosition, GLfloat* lightDir, GLfloat* cameraPos) {
+void setSphereTexCoord(GLfloat coords[3], GLfloat radius) {
+    GLfloat s = acosf(coords[2] / radius) / M_PI;
+    GLfloat t = (atan2f(coords[1], coords[0]) - M_PI_2) / (2 * M_PI);
+    if( s<.01 && s>-.01){
+        cout << s << endl;
+    }
+    glTexCoord2d(t, s);
+}
+
+GLfloat getLightValue(GLfloat vertexPosition[3], GLfloat normal[3], GLfloat lightDir[3], GLfloat* cameraPos) {
     
     GLfloat normalizedLight[3] = {lightDir[0], lightDir[1], lightDir[2]};
     GLfloat normalizedNormal[3] = {normal[0], normal[1], normal[2]};
@@ -109,16 +118,83 @@ GLfloat getLightValue(GLfloat* normal, GLfloat* vertexPosition, GLfloat* lightDi
 //    return   color * info.material->getSpecular() * angleFactor;
 }
 
-void drawCylinder(int slices, int height, int radius){
+void drawSphereWithQuads(float radius, int numSlices, int numStacks){
+    float angleFraction = (M_PI*2)/numSlices;
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    //draw sphere with center at origin from bottom up
+    for(int i=0; i<numStacks; i++){
+        float curStackY= ((2*radius*i)/numStacks)-radius;
+        float curStackRadius = sqrt(pow(radius, 2)-pow(curStackY, 2));
+        float nextStackY = ((2*radius*(i+1))/numStacks)-radius;
+        float nextStackRadius= sqrt(pow(radius, 2)-pow(nextStackY, 2));
+        for(int j=0; j<numSlices; j++) {
+
+            GLfloat v0 [3] = {static_cast<GLfloat>(curStackRadius*cos((j+1)*angleFraction)), curStackY, static_cast<GLfloat>(curStackRadius*sin((j+1)*angleFraction))};
+            GLfloat v1 [3] = {static_cast<GLfloat>(curStackRadius*cos(j*angleFraction)), curStackY, static_cast<GLfloat>(curStackRadius*sin(j*angleFraction))};
+            GLfloat v2 [3] =  {static_cast<GLfloat>(nextStackRadius*cos(j*angleFraction)), nextStackY, static_cast<GLfloat>(nextStackRadius*sin(j*angleFraction))};
+            GLfloat v3 [3] = {static_cast<GLfloat>(nextStackRadius*cos((j+1)*angleFraction)), nextStackY, static_cast<GLfloat>(nextStackRadius*sin((j+1)*angleFraction))};
+            GLfloat lightVal[4] = {
+                getLightValue(v0, v0, lightPosition, NULL),
+                getLightValue(v1, v1, lightPosition, NULL),
+                getLightValue(v2, v2, lightPosition, NULL),
+                getLightValue(v3, v3, lightPosition, NULL)
+            };
+            int texIndex[4] = {
+                getTextureIndex(lightVal[0]),
+                getTextureIndex(lightVal[1]),
+                getTextureIndex(lightVal[2]),
+                getTextureIndex(lightVal[4])
+            };
+            
+            glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+            glEnable(GL_BLEND);
+            glEnable(GL_COLOR_MATERIAL);
+            
+            glColor4f(1.0f, 1.0f, 1.0f, .25f);
+            
+            for (int k = 0; k < 4; ++k) {
+                glEnable(GL_TEXTURE_2D);
+                glActiveTexture(textures[texIndex[k]]);
+                glBindTexture(GL_TEXTURE_2D, textures[texIndex[k]]);
+                glBegin(GL_QUADS);
+                glNormal3fv(v0); setSphereTexCoord(v0, radius); glVertex3fv(v0);
+                glNormal3fv(v1); setSphereTexCoord(v1, radius); glVertex3fv(v1);
+                glNormal3fv(v2); setSphereTexCoord(v2, radius); glVertex3fv(v2);
+                glNormal3fv(v3); setSphereTexCoord(v3, radius); glVertex3fv(v3);
+                glEnd();
+                glDisable(GL_TEXTURE_2D);
+            }
+            
+            glDisable(GL_BLEND);
+            glDisable(GL_COLOR_MATERIAL);
+
+        }
+    }
+    glDisable(GL_CULL_FACE);
+}
+
+void drawCylinder(int slices, int height, double radius){
     double angleFraction = (M_PI*2)/slices;
-    for(int i=0; i<=slices; i++){
+    int numHorizontalTiles = 21;
+    double sliceWidth = sqrt(pow(radius*cos((1)*angleFraction)-radius*cos((2)*angleFraction),2)+pow(radius*sin((1)*angleFraction)-radius*sin((2)*angleFraction),2));
+    double realCircumference = sliceWidth * slices;
+    double realTextureWidth = static_cast<double>(slices) / numHorizontalTiles;
+    double realTextureHeight = height * numHorizontalTiles / realCircumference;
+    
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    
+    double topTriangleTexHeight = radius/sliceWidth;
+    
+    for(int i=0; i<slices; i++){
         
         // Draw the top and bottom circles
         glBegin(GL_TRIANGLES);
         glNormal3f(0, 1, 0);
-        glVertex3f(0, height, 0);
-        glVertex3f(radius*cos(i*angleFraction), height, radius*sin(i*angleFraction));
-        glVertex3f(radius*cos((i+1)*angleFraction), height, radius*sin((i+1)*angleFraction));
+        glTexCoord2i(.5,0);glVertex3f(0, height, 0);
+        glTexCoord2i(topTriangleTexHeight,0); glVertex3f(radius*cos((i+1)*angleFraction), height, radius*sin((i+1)*angleFraction));
+        glTexCoord2i(topTriangleTexHeight,1);glVertex3f(radius*cos(i*angleFraction), height, radius*sin(i*angleFraction));
         
         glNormal3f(0, -1, 0);
         glVertex3f(0, 0, 0);
@@ -142,14 +218,13 @@ void drawCylinder(int slices, int height, int radius){
         int texIndex = getTextureIndex(lightValue);
         glEnable(GL_TEXTURE_2D);
         glActiveTexture(textures[texIndex]);
-        cout << lightValue << ": " << texIndex << endl; 
         glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
         glBegin(GL_QUADS);
         glNormal3f(normal[0], normal[1], normal[2]);
-        glTexCoord2i(0, 1); glVertex3f(v0[0], v0[1], v0[2]);
-        glTexCoord2i(1, 1); glVertex3f(radius*cos((i+1)*angleFraction), height, radius*sin((i+1)*angleFraction));
-        glTexCoord2i(1, 0); glVertex3f(radius*cos((i+1)*angleFraction), 0, radius*sin((i+1)*angleFraction));
-        glTexCoord2i(0, 0); glVertex3f(radius*cos(i*angleFraction), 0, radius*sin(i*angleFraction));
+        glTexCoord2i(i/realTextureWidth, realTextureHeight); glVertex3f(v0[0], v0[1], v0[2]);
+        glTexCoord2i((i+1)/realTextureWidth, realTextureHeight); glVertex3f(radius*cos((i+1)*angleFraction), height, radius*sin((i+1)*angleFraction));
+        glTexCoord2i((i+1)/realTextureWidth, 0); glVertex3f(radius*cos((i+1)*angleFraction), 0, radius*sin((i+1)*angleFraction));
+        glTexCoord2i(i/realTextureWidth, 0); glVertex3f(radius*cos(i*angleFraction), 0, radius*sin(i*angleFraction));
         glDisable(GL_TEXTURE_2D);
         glEnd();
         
@@ -162,64 +237,66 @@ GLfloat** sortVertices(GLfloat *a, GLfloat* b, GLfloat* c, int axis) {
     return vertices;
 }
 
-
 void drawtri(GLfloat *a, GLfloat *b, GLfloat *c, int div, float r) {
     if (div<=0) {
-        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
-        glEnable(GL_BLEND);
-        glEnable(GL_COLOR_MATERIAL);
+//        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+//        glEnable(GL_BLEND);
+//        glEnable(GL_COLOR_MATERIAL);
         
-        glColor4f(1.0f, 1.0f, 1.0f, (.4f));
+//        glColor4f(1.0f, 1.0f, 1.0f, (.4f));
         GLfloat lightVal[3] = {getLightValue(a, a, lightPosition, NULL), getLightValue(b, b, lightPosition, NULL),getLightValue(c, c, lightPosition, NULL)};
         int texIndex[3] = {getTextureIndex(lightVal[0]), getTextureIndex(lightVal[1]), getTextureIndex(lightVal[2])};
-        for (int i=0; i<3; i++) {
+        for (int i=0; i<1; i++) {
             glActiveTexture(textures[texIndex[i]]);
             glBindTexture(GL_TEXTURE_2D, textures[texIndex[i]]);
             glBegin(GL_TRIANGLES);
-            // Sort the textures by y coordinate to determine orientation
-            GLfloat** sortedByYCoordinates = sortVertices(a, b, c, 1);
-            GLfloat* v0 = sortedByYCoordinates[0];
-            GLfloat* v1 = sortedByYCoordinates[1];
-            GLfloat* v2 = sortedByYCoordinates[2];
-            if (fabs(v0[1] - v1[1]) < fabs(v1[1] - v2[1])) {
-                if (v0[0] < v1[0]) {
-                    // We look like this:
-                    //      2
-                    //   0     1
-                    
-                    glNormal3fv(v0); glTexCoord2i(0, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                    glNormal3fv(v1); glTexCoord2i(1, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-                } else {
-                    // We look like this:
-                    //      2
-                    //   1     0
-                    
-                    glNormal3fv(v1); glTexCoord2i(0, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                    glNormal3fv(v0); glTexCoord2i(1, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-                }
-            } else {
-                if (v2[0] < v1[0]) {
-                    // We look like this:
-                    //     2     1
-                    //        0
-                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                    glNormal3fv(v1); glTexCoord2i(1, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                    glNormal3fv(v2); glTexCoord2i(0, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-                } else {
-                    // We look like this:
-                    //     1     2
-                    //        0
-                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-                    glNormal3fv(v2); glTexCoord2i(1, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-                    glNormal3fv(v1); glTexCoord2i(0, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-                }
-            }
+            glNormal3fv(a); setSphereTexCoord(a, r); glVertex3fv(a);
+            glNormal3fv(b); setSphereTexCoord(b, r); glVertex3fv(b);
+            glNormal3fv(c); setSphereTexCoord(b, r); glVertex3fv(c);
+//            // Sort the textures by y coordinate to determine orientation
+//            GLfloat** sortedByYCoordinates = sortVertices(a, b, c, 1);
+//            GLfloat* v0 = sortedByYCoordinates[0];
+//            GLfloat* v1 = sortedByYCoordinates[1];
+//            GLfloat* v2 = sortedByYCoordinates[2];
+//            if (fabs(v0[1] - v1[1]) < fabs(v1[1] - v2[1])) {
+//                if (v0[0] < v1[0]) {
+//                    // We look like this:
+//                    //      2
+//                    //   0     1
+//                    
+//                    glNormal3fv(v0); glTexCoord2i(0, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+//                    glNormal3fv(v1); glTexCoord2i(1, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+//                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+//                } else {
+//                    // We look like this:
+//                    //      2
+//                    //   1     0
+//                    
+//                    glNormal3fv(v1); glTexCoord2i(0, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+//                    glNormal3fv(v0); glTexCoord2i(1, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+//                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+//                }
+//            } else {
+//                if (v2[0] < v1[0]) {
+//                    // We look like this:
+//                    //     2     1
+//                    //        0
+//                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+//                    glNormal3fv(v1); glTexCoord2i(1, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+//                    glNormal3fv(v2); glTexCoord2i(0, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+//                } else {
+//                    // We look like this:
+//                    //     1     2
+//                    //        0
+//                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
+//                    glNormal3fv(v2); glTexCoord2i(1, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
+//                    glNormal3fv(v1); glTexCoord2i(0, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
+//                }
+//            }
             glEnd();
         }
-        glDisable(GL_BLEND);
-        glDisable(GL_COLOR_MATERIAL);
+//        glDisable(GL_BLEND);
+//        glDisable(GL_COLOR_MATERIAL);
     } else {
         GLfloat ab[3], ac[3], bc[3];
         for (int i=0;i<3;i++) {
@@ -411,8 +488,8 @@ void display()
 
 //    drawsphere(1);
     
-    drawCylinder(20, 1, 1);
-    
+   // drawCylinder(20, 1, 1);
+    drawSphereWithQuads(1, 50, 50);
     
 //    glEnable(GL_TEXTURE_2D);
 //    for (int i = -3; i < 3; i += 1) {
