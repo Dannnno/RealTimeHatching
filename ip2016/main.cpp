@@ -17,9 +17,6 @@ void mouse(int button, int state, int x, int y);
 void motion(int x, int y);
 void init();
 
-#define X .525731112119133606
-#define Z .850650808352039932
-
 GLuint textures[NUMBER_OF_TONES];
 GLfloat lightPosition[]={5, 5, 5,1};
 
@@ -33,19 +30,6 @@ void checkGLError() {
         }
 }
 
-
-
-static GLfloat vdata[12][3] = {
-    {-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z}, {X, 0.0, -Z},
-    {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
-    {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}
-};
-
-static GLuint tindices[20][3] = {
-    {0,4,1}, {0,9,4}, {9,5,4}, {4,5,8}, {4,8,1},
-    {8,10,1}, {8,3,10}, {5,3,8}, {5,2,3}, {2,7,3},
-    {7,10,3}, {7,6,10}, {7,11,6}, {11,0,6}, {0,1,6},
-    {6,1,10}, {9,0,11}, {9,11,2}, {9,2,5}, {7,2,11} };
 void normalize(GLfloat *a) {
     GLfloat d=sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);
     a[0]/=d; a[1]/=d; a[2]/=d;
@@ -90,6 +74,10 @@ void setSphereTexCoord(GLfloat coords[3], GLfloat radius) {
 
 GLfloat getLightValue(GLfloat vertexPosition[3], GLfloat normal[3], GLfloat lightDir[3], GLfloat* cameraPos) {
     
+//    if (lightDir[4] == 1) {
+//        // Point light
+//        return getPointLightValue(vertexPosition...)
+//    }
     GLfloat normalizedLight[3] = {lightDir[0], lightDir[1], lightDir[2]};
     GLfloat normalizedNormal[3] = {normal[0], normal[1], normal[2]};
     normalize(normalizedLight);
@@ -117,6 +105,190 @@ GLfloat getLightValue(GLfloat vertexPosition[3], GLfloat normal[3], GLfloat ligh
 //    angleFactor = pow(angleFactor,info.material->getKshine());
 //    return   color * info.material->getSpecular() * angleFactor;
 }
+
+void drawCone(double height, float baseRadius, int numStacks, int numSlices) {
+    float angleFraction = (M_PI*2)/numSlices;
+    double stackHeight = height/numStacks;
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    for(int i=0; i<numStacks-1; i++){
+        float curStackY= stackHeight*i; //((2*radius*i)/numStacks)-radius;
+        float curStackRadius = baseRadius - ((i*baseRadius)/(numStacks-1.));
+        float nextStackY = stackHeight*(i+1);
+        float nextStackRadius= baseRadius - (((i+1)*baseRadius)/(numStacks-1.));
+        for(int j=0; j<numSlices; j++) {
+            GLfloat v0 [3] = {static_cast<GLfloat>(curStackRadius*cos((j+1)*angleFraction)), curStackY, static_cast<GLfloat>(curStackRadius*sin((j+1)*angleFraction))};
+            GLfloat v1 [3] = {static_cast<GLfloat>(curStackRadius*cos(j*angleFraction)), curStackY, static_cast<GLfloat>(curStackRadius*sin(j*angleFraction))};
+            GLfloat v2 [3] =  {static_cast<GLfloat>(nextStackRadius*cos(j*angleFraction)), nextStackY, static_cast<GLfloat>(nextStackRadius*sin(j*angleFraction))};
+            GLfloat v3 [3] = {static_cast<GLfloat>(nextStackRadius*cos((j+1)*angleFraction)), nextStackY, static_cast<GLfloat>(nextStackRadius*sin((j+1)*angleFraction))};
+            GLfloat m[4] = {
+                static_cast<GLfloat>(sqrt(pow(v0[0], 2) + pow(v0[2], 2))),
+                static_cast<GLfloat>(sqrt(pow(v1[0], 2) + pow(v1[2], 2))),
+                static_cast<GLfloat>(sqrt(pow(v2[0], 2) + pow(v2[2], 2))),
+                static_cast<GLfloat>(sqrt(pow(v3[0], 2) + pow(v3[2], 2)))
+            };
+            GLfloat n0 [3] = {
+                static_cast<GLfloat>((v0[0] / m[0]) * height / baseRadius),
+                static_cast<GLfloat>(baseRadius / height),
+                static_cast<GLfloat>((v0[2] / m[0]) * height / baseRadius),
+            };
+            GLfloat n1 [3] = {
+                static_cast<GLfloat>((v1[0] / m[0]) * height / baseRadius),
+                static_cast<GLfloat>(baseRadius / height),
+                static_cast<GLfloat>((v1[2] / m[0]) * height / baseRadius),
+            };
+            GLfloat n2 [3] = {
+                static_cast<GLfloat>((v2[0] / m[0]) * height / baseRadius),
+                static_cast<GLfloat>(baseRadius / height),
+                static_cast<GLfloat>((v2[2] / m[0]) * height / baseRadius),
+            };
+            GLfloat n3 [3] = {
+                static_cast<GLfloat>((v3[0] / m[0]) * height / baseRadius),
+                static_cast<GLfloat>(baseRadius / height),
+                static_cast<GLfloat>((v3[2] / m[0]) * height / baseRadius),
+            };
+            GLfloat lightVal[4] = {
+                getLightValue(v0, n0, lightPosition, NULL),
+                getLightValue(v1, n1, lightPosition, NULL),
+                getLightValue(v2, n2, lightPosition, NULL),
+                getLightValue(v3, n3, lightPosition, NULL)
+            };
+            int texIndex[4] = {
+                getTextureIndex(lightVal[0]),
+                getTextureIndex(lightVal[1]),
+                getTextureIndex(lightVal[2]),
+                getTextureIndex(lightVal[3])
+            };
+//            
+//            glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+//            glEnable(GL_BLEND);
+//            glEnable(GL_COLOR_MATERIAL);
+            
+            glColor4f(1.0f, 1.0f, 1.0f, .25f);
+            
+            for (int k = 0; k < 4; ++k) {
+                glEnable(GL_TEXTURE_2D);
+                glActiveTexture(textures[texIndex[k]]);
+                glBindTexture(GL_TEXTURE_2D, textures[texIndex[k]]);
+                glBegin(GL_QUADS);
+                glNormal3fv(n0); glTexCoord2d((j+1)*angleFraction/(2*M_PI), curStackY/height);glVertex3fv(v0);
+                glNormal3fv(n1); glTexCoord2d(j*angleFraction/(2*M_PI), curStackY/height); glVertex3fv(v1);
+                glNormal3fv(n2); glTexCoord2d(j*angleFraction/(2*M_PI), nextStackY/height); glVertex3fv(v2);
+                glNormal3fv(n3); glTexCoord2d((j+1)*angleFraction/(2*M_PI), nextStackY/height); glVertex3fv(v3);
+                glEnd();
+                glDisable(GL_TEXTURE_2D);
+            }
+            
+//            glDisable(GL_BLEND);
+//            glDisable(GL_COLOR_MATERIAL);
+            
+        }
+    }
+    
+    //draw base
+    for( int a=0; a<numSlices; a++) {
+        glBegin(GL_TRIANGLES);
+        glNormal3f(0, -1, 0);
+        glVertex3f(0, 0, 0);
+        glVertex3f(baseRadius*cos(a*angleFraction), 0, baseRadius*sin(a*angleFraction));
+        glVertex3f(baseRadius*cos((a+1)*angleFraction), 0, baseRadius*sin((a+1)*angleFraction));
+        glEnd();
+    }
+    glDisable(GL_CULL_FACE);
+}
+
+void drawCubeWithQuads(double sideLength, int numSlices) {
+    const double halfLength = sideLength / 2;
+    const double quadSideLength = sideLength / numSlices;
+    
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    // draw the top and bottom
+    for (double x = -halfLength; x < halfLength; x += quadSideLength){
+        for (double z = -halfLength; z < halfLength; z += quadSideLength){
+            glBegin(GL_QUADS);
+            // top
+//            GLfloat v0[3] = {static_cast<GLfloat>(x), static_cast<GLfloat>(halfLength), static_cast<GLfloat>(z)};
+//            GLfloat v1[3] = {x, halfLength, z + quadSideLength};
+//            GLfloat v2[3] = {x+quadSideLength, halfLength, z};
+//            GLfloat v3[3] = {x+quadSideLength, halfLength, z + quadSideLength};
+//            GLfloat normal[3] = {0, 1, 0};
+//            
+//            GLfloat lightVal[4] = {
+//                getLightValue(v0, normal, lightPosition, NULL),
+//                getLightValue(v1, normal, lightPosition, NULL),
+//                getLightValue(v2, normal, lightPosition, NULL),
+//                getLightValue(v3, normal, lightPosition, NULL)
+//            };
+//            int texIndex[4] = {
+//                getTextureIndex(lightVal[0]),
+//                getTextureIndex(lightVal[1]),
+//                getTextureIndex(lightVal[2]),
+//                getTextureIndex(lightVal[3])
+//            };
+            glNormal3f(0, 1, 0);
+            glTexCoord2d(x/sideLength, z/sideLength);glVertex3f(x, halfLength, z);
+            glTexCoord2d(x/sideLength, (z+quadSideLength)/sideLength);glVertex3f(x, halfLength, z + quadSideLength);
+            glTexCoord2d((x+quadSideLength)/sideLength, (z+quadSideLength)/sideLength);glVertex3f(x + quadSideLength, halfLength, z + quadSideLength);
+            glTexCoord2d((x+quadSideLength)/sideLength, z/sideLength);glVertex3f(x + quadSideLength, halfLength, z);
+            
+            // bottom
+            glNormal3f(0, -1, 0);
+            glTexCoord2d(x/sideLength, z/sideLength);glVertex3f(x, -halfLength, z);
+            glTexCoord2d(x/sideLength, (z+quadSideLength)/sideLength);glVertex3f(x, -halfLength, z + quadSideLength);
+            glTexCoord2d((x+quadSideLength)/sideLength, (z+quadSideLength)/sideLength);glVertex3f(x + quadSideLength, -halfLength, z + quadSideLength);
+            glTexCoord2d((x+quadSideLength)/sideLength, z/sideLength);glVertex3f(x + quadSideLength, -halfLength, z);
+            glEnd();
+        }
+    }
+    
+    // draw the +/- x sides
+    for (double y = -halfLength; y < halfLength; y += quadSideLength){
+        for (double z = -halfLength; z < halfLength; z += quadSideLength){
+            glBegin(GL_QUADS);
+            // +x
+            glNormal3f(1, 0, 0);
+            glVertex3f(halfLength, y, z + quadSideLength);
+            glVertex3f(halfLength, y, z);
+            glVertex3f(halfLength, y + quadSideLength, z);
+            glVertex3f(halfLength, y + quadSideLength, z + quadSideLength);
+            
+            // -x
+            glNormal3f(-1, 0, 0);
+            glVertex3f(-halfLength, y, z);
+            glVertex3f(-halfLength, y, z + quadSideLength);
+            glVertex3f(-halfLength, y + quadSideLength, z + quadSideLength);
+            glVertex3f(-halfLength, y + quadSideLength, z);
+            glEnd();
+        }
+    }
+    
+    // draw the +/- z sides
+    for (double y = -halfLength; y < halfLength; y += quadSideLength){
+        for (double x = -halfLength; x < halfLength; x += quadSideLength){
+            glBegin(GL_QUADS);
+            // +z
+            glNormal3f(0, 0, 1);
+            glVertex3f(x, y, halfLength);
+            glVertex3f(x + quadSideLength, y, halfLength);
+            glVertex3f(x + quadSideLength, y + quadSideLength, halfLength);
+            glVertex3f(x, y + quadSideLength, halfLength);
+            
+            // -z
+            glNormal3f(0, 0, -1);
+            glVertex3f(x + quadSideLength, y, -halfLength);
+            glVertex3f(x, y, -halfLength);
+            glVertex3f(x, y + quadSideLength, -halfLength);
+            glVertex3f(x + quadSideLength, y + quadSideLength, -halfLength);
+            glEnd();
+        }
+    }
+    
+    glDisable(GL_CULL_FACE);
+}
+
+
 
 void drawSphereWithQuads(float radius, int numSlices, int numStacks){
     float angleFraction = (M_PI*2)/numSlices;
@@ -230,97 +402,6 @@ void drawCylinder(int slices, int height, double radius){
         
     }
 }
-
-GLfloat** sortVertices(GLfloat *a, GLfloat* b, GLfloat* c, int axis) {
-    GLfloat* vertices[3] = {a, b, c};
-    std::sort(vertices, vertices + 3, [=](GLfloat* l, GLfloat* r) { return l[axis] < r[axis]; });
-    return vertices;
-}
-
-void drawtri(GLfloat *a, GLfloat *b, GLfloat *c, int div, float r) {
-    if (div<=0) {
-//        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
-//        glEnable(GL_BLEND);
-//        glEnable(GL_COLOR_MATERIAL);
-        
-//        glColor4f(1.0f, 1.0f, 1.0f, (.4f));
-        GLfloat lightVal[3] = {getLightValue(a, a, lightPosition, NULL), getLightValue(b, b, lightPosition, NULL),getLightValue(c, c, lightPosition, NULL)};
-        int texIndex[3] = {getTextureIndex(lightVal[0]), getTextureIndex(lightVal[1]), getTextureIndex(lightVal[2])};
-        for (int i=0; i<1; i++) {
-            glActiveTexture(textures[texIndex[i]]);
-            glBindTexture(GL_TEXTURE_2D, textures[texIndex[i]]);
-            glBegin(GL_TRIANGLES);
-            glNormal3fv(a); setSphereTexCoord(a, r); glVertex3fv(a);
-            glNormal3fv(b); setSphereTexCoord(b, r); glVertex3fv(b);
-            glNormal3fv(c); setSphereTexCoord(b, r); glVertex3fv(c);
-//            // Sort the textures by y coordinate to determine orientation
-//            GLfloat** sortedByYCoordinates = sortVertices(a, b, c, 1);
-//            GLfloat* v0 = sortedByYCoordinates[0];
-//            GLfloat* v1 = sortedByYCoordinates[1];
-//            GLfloat* v2 = sortedByYCoordinates[2];
-//            if (fabs(v0[1] - v1[1]) < fabs(v1[1] - v2[1])) {
-//                if (v0[0] < v1[0]) {
-//                    // We look like this:
-//                    //      2
-//                    //   0     1
-//                    
-//                    glNormal3fv(v0); glTexCoord2i(0, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-//                    glNormal3fv(v1); glTexCoord2i(1, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-//                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-//                } else {
-//                    // We look like this:
-//                    //      2
-//                    //   1     0
-//                    
-//                    glNormal3fv(v1); glTexCoord2i(0, 0); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-//                    glNormal3fv(v0); glTexCoord2i(1, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-//                    glNormal3fv(v2); glTexCoord2i(.5, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-//                }
-//            } else {
-//                if (v2[0] < v1[0]) {
-//                    // We look like this:
-//                    //     2     1
-//                    //        0
-//                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-//                    glNormal3fv(v1); glTexCoord2i(1, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-//                    glNormal3fv(v2); glTexCoord2i(0, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-//                } else {
-//                    // We look like this:
-//                    //     1     2
-//                    //        0
-//                    glNormal3fv(v0); glTexCoord2i(.5, 0); glVertex3f(v0[0]*r, v0[1]*r, v0[2]*r);
-//                    glNormal3fv(v2); glTexCoord2i(1, 1); glVertex3f(v2[0]*r, v2[1]*r, v2[2]*r);
-//                    glNormal3fv(v1); glTexCoord2i(0, 1); glVertex3f(v1[0]*r, v1[1]*r, v1[2]*r);
-//                }
-//            }
-            glEnd();
-        }
-//        glDisable(GL_BLEND);
-//        glDisable(GL_COLOR_MATERIAL);
-    } else {
-        GLfloat ab[3], ac[3], bc[3];
-        for (int i=0;i<3;i++) {
-            ab[i]=(a[i]+b[i])/2;
-            ac[i]=(a[i]+c[i])/2;
-            bc[i]=(b[i]+c[i])/2;
-        }
-        normalize(ab); normalize(ac); normalize(bc);
-        drawtri(a, ab, ac, div-1, r);
-        drawtri(b, bc, ab, div-1, r);
-        drawtri(c, ac, bc, div-1, r);
-        drawtri(ab, bc, ac, div-1, r);  //<--Comment this line and sphere looks really cool!
-    }
-}
-void drawsphere(int ndiv, float radius=1.0) {
-    glEnable(GL_TEXTURE_2D);
-    
-//    glBegin(GL_TRIANGLES);
-    for (int i=0;i<20;i++)
-        drawtri(vdata[tindices[i][0]], vdata[tindices[i][1]], vdata[tindices[i][2]], ndiv, radius);
-    glDisable(GL_TEXTURE_2D);
-//    glEnd();
-}
-
 
 void loadTAM(){
     
@@ -486,59 +567,11 @@ void display()
     glNormal3f(1,0,0);
     glColor3d(1, 1, 1);
 
-//    drawsphere(1);
     
    // drawCylinder(20, 1, 1);
     drawSphereWithQuads(1, 50, 50);
-    
-//    glEnable(GL_TEXTURE_2D);
-//    for (int i = -3; i < 3; i += 1) {
-//        glActiveTexture(textures[i+3]); //GL_TEXTURE0 + i + 3);
-//        glBindTexture(GL_TEXTURE_2D, textures[i+3]);
-//        int x = i, y = 0, z = 0, size = 1;
-//        glPushMatrix();
-//        glBegin(GL_QUADS);
-//        glTexCoord2i(0, 0); glVertex3f(x, y, z);
-//        glTexCoord2i(1, 0); glVertex3f(x, y+size, z);
-//        glTexCoord2i(1, 1); glVertex3f(x+size, y+size, z);
-//        glTexCoord2i(0, 1); glVertex3f(x+size, y, z);
-//        glEnd();
-//        glPopMatrix();
-//    }
-//        glDisable(GL_TEXTURE_2D);
-    
-
-//    // draw a red triangle
-//    glMaterialfv(GL_FRONT, GL_DIFFUSE, red);
-//    glMaterialfv(GL_FRONT, GL_SPECULAR, red);
-//    glMateriali(GL_FRONT,GL_SHININESS,0);
-//    glBegin(GL_TRIANGLES);
-//    glVertex3f(-3,-1,-8);
-//    glVertex3f(3,-1,-10);
-//    glVertex3f(0,3,-9);
-//    glEnd();
-//    
-//    glNormal3f(0,1,0);
-//    
-//    
-//    // draw Triangle strip
-//    glMaterialfv(GL_FRONT, GL_DIFFUSE, green);
-//    glMaterialfv(GL_FRONT, GL_SPECULAR, green);
-//    glMateriali(GL_FRONT,GL_SHININESS,0);			// gree
-//    //glColor4fv(green);
-//    glBegin(GL_TRIANGLE_STRIP);
-//    glVertex3f(-10.0,-1.0,-10.0);
-//    glVertex3f(-10.0,-1.0,10.0);
-//    glVertex3f(10.0,-1.0,-10.0);
-//    glVertex3f(10.0,-1.0,10.0);
-//    glEnd();
-//    
-//    // draw Sphere
-//    glMaterialfv(GL_FRONT, GL_DIFFUSE, purple);
-//    glMaterialfv(GL_FRONT, GL_SPECULAR, purple);
-//    glMateriali(GL_FRONT,GL_SHININESS,50);			// purple
-//    //glColor4fv(purple);
-//    glutSolidSphere(.75,100,100);
+//    drawCone(2, 1, 15, 15);
+//    drawCubeWithQuads(2, 50);
     
     // swap buffers
     glutSwapBuffers();
